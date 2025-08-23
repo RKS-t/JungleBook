@@ -1,6 +1,8 @@
 package org.example.junglebook.entity.debate
 
 import jakarta.persistence.*
+import org.example.junglebook.enums.debate.JunglebookReferenceType
+import org.example.junglebook.enums.post.CountType
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime

@@ -1,5 +1,6 @@
 package org.example.junglebook.service.debate
 
+import kr.co.minust.api.exception.DefaultErrorCode
 import kr.co.minust.api.exception.GlobalException
 import org.example.junglebook.entity.debate.JunglebookPostEntity
 import org.example.junglebook.enums.post.CountType
@@ -59,23 +60,23 @@ open class JunglebookPostService(
         val existCount = 0 // 주석 처리된 부분 그대로 유지
 
         if (existCount > 0) {
-            throw GlobalException("ALREADY_EXISTS")
+            throw GlobalException(DefaultErrorCode.ALREADY_EXISTS)
         }
 
         val updateResult = when (countType) {
             CountType.LIKE -> junglebookPostRepository.increaseLikeCount(id)
             CountType.DISLIKE -> junglebookPostRepository.increaseDislikeCount(id)
-            else -> throw GlobalException("WRONG_ACCESS")
+            else -> throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
         }
 
         if (updateResult > 0) {
             // 주석 처리된 히스토리 저장 부분 그대로 유지
             return when (countType) {
                 CountType.LIKE, CountType.DISLIKE -> true
-                else -> throw GlobalException("WRONG_ACCESS")
+                else -> throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
             }
         } else {
-            throw GlobalException("WRONG_ACCESS")
+            throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
         }
     }
 

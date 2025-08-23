@@ -1,5 +1,6 @@
 package org.example.junglebook.service.post
 
+import kr.co.minust.api.exception.DefaultErrorCode
 import kr.co.minust.api.exception.GlobalException
 import org.apache.commons.io.FilenameUtils
 import org.example.junglebook.entity.post.BoardEntity
@@ -54,13 +55,13 @@ class PostService(
         )
 
         if (existCount > 0) {
-            throw GlobalException("ALREADY_EXISTS")
+            throw GlobalException(DefaultErrorCode.ALREADY_EXISTS)
         }
 
         val updateResult = when (countType) {
             CountType.LIKE -> postRepository.increaseLikeCount(board.id!!, id)
             CountType.DISLIKE -> postRepository.increaseDislikeCount(board.id!!, id)
-            else -> throw GlobalException("WRONG_ACCESS")
+            else -> throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
         }
 
         if (updateResult > 0) {
@@ -73,15 +74,15 @@ class PostService(
             postCountHistoryRepository.save(history)
 
             val updatedPost = postRepository.findById(id)
-                .orElseThrow { GlobalException("WRONG_ACCESS") }
+                .orElseThrow { GlobalException(DefaultErrorCode.WRONG_ACCESS) }
 
             return when (countType) {
                 CountType.LIKE -> updatedPost.likeCnt
                 CountType.DISLIKE -> updatedPost.dislikeCnt
-                else -> throw GlobalException("WRONG_ACCESS")
+                else -> throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
             }
         } else {
-            throw GlobalException("WRONG_ACCESS")
+            throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
         }
     }
 

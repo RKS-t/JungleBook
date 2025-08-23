@@ -1,5 +1,6 @@
 package org.example.junglebook.service.debate
 
+import kr.co.minust.api.exception.DefaultErrorCode
 import kr.co.minust.api.exception.GlobalException
 import org.example.junglebook.entity.debate.JunglebookCountHistoryEntity
 import org.example.junglebook.entity.debate.JunglebookEntity
@@ -47,7 +48,7 @@ class JunglebookService(
         )
 
         if (existCount > 0) {
-            throw GlobalException("ALREADY_EXISTS")
+            throw GlobalException(DefaultErrorCode.ALREADY_EXISTS)
         }
 
         val updateResult = junglebookRepository.increasePostCount(id)
@@ -62,10 +63,10 @@ class JunglebookService(
             junglebookCountHistoryRepository.save(history)
 
             return junglebookRepository.findById(id).orElseThrow {
-                GlobalException("WRONG_ACCESS")
+                GlobalException(DefaultErrorCode.WRONG_ACCESS)
             }.postCnt
         } else {
-            throw GlobalException("WRONG_ACCESS")
+            throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
         }
     }
 }

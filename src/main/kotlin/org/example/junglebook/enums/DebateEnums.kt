@@ -1,9 +1,9 @@
 package org.example.junglebook.enums
 
 enum class DebateTopicStatus {
-    PREPARING,  // 준비중 (관리자만 접근 가능)
-    DEBATING,   // 토론중 (모든 유저 참여 가능)
-    CLOSED,     // 토론 종료 (읽기만 가능)
+    PREPARING,  // 준비중
+    DEBATING,   // 토론중
+    CLOSED,     // 토론 종료
     VOTING      // 투표중
 }
 
@@ -25,4 +25,8 @@ enum class ArgumentStance {
 enum class VoteType {
     UPVOTE,
     DOWNVOTE
+}
+
+enum class DebateReferenceType {
+    ARGUMENT, REPLY
 }

@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement
 import javax.sql.DataSource
 
 @Configuration
-// 1. @MapperScan을 @EnableJpaRepositories로 변경
 @EnableJpaRepositories(basePackages = ["org.example.junglebook.repository"]) // JPA 레포지토리 패키지 경로
 @EntityScan(basePackages = ["org.example.junglebook.entity"]) // JPA 엔티티 패키지 경로
 @EnableTransactionManagement // 트랜잭션 관리 활성화

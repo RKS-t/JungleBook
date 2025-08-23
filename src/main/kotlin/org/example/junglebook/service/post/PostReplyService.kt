@@ -1,5 +1,7 @@
 package org.example.junglebook.service.post
 
+import kr.co.minust.api.exception.DefaultErrorCode
+import kr.co.minust.api.exception.GlobalException
 import org.example.junglebook.entity.post.PostCountHistoryEntity
 import org.example.junglebook.entity.post.PostReplyEntity
 import org.example.junglebook.enums.post.CountType
@@ -47,7 +49,7 @@ class PostReplyService(
         val replyCount = postReplyRepository.countByPostIdAndPidAndUseYnTrue(entity.postId, entity.id!!)
 
         if (replyCount > 0) {
-            throw Exception("Reply exists.")
+            throw GlobalException(DefaultErrorCode.REPLY_EXISTS)
         }
 
         fileIds?.forEach { fileId ->
@@ -72,7 +74,7 @@ class PostReplyService(
         val replyCount = postReplyRepository.countByPostIdAndPidAndUseYnTrue(postId, id)
 
         if (replyCount > 0) {
-            throw Exception("Reply exists.")
+            throw GlobalException(DefaultErrorCode.REPLY_EXISTS)
         }
 
         val resultCount = postReplyRepository.softDelete(id, userId)
@@ -92,13 +94,13 @@ class PostReplyService(
         )
 
         if (existCount > 0) {
-            throw Exception("Already Exists")
+            throw GlobalException(DefaultErrorCode.ALREADY_EXISTS)
         }
 
         val updateResult = when (countType) {
             CountType.LIKE -> postReplyRepository.increaseLikeCount(boardId, id)
             CountType.DISLIKE -> postReplyRepository.increaseDislikeCount(boardId, id)
-            else -> throw Exception("Wrong Access")
+            else -> throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
         }
 
         if (updateResult == 0) {
@@ -113,15 +115,15 @@ class PostReplyService(
 
             // 업데이트된 카운트 반환
             val updatedReply = postReplyRepository.findById(id)
-                .orElseThrow { Exception("Reply not found") }
+                .orElseThrow { GlobalException(DefaultErrorCode.REPLY_NOT_FOUND) }
 
             return when (countType) {
                 CountType.LIKE -> updatedReply.likeCnt
                 CountType.DISLIKE -> updatedReply.dislikeCnt
-                else -> throw Exception("Wrong Access")
+                else -> throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
             }
         } else {
-            throw Exception("Wrong Access")
+            throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
         }
     }
 }
