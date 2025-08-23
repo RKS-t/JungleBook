@@ -1,10 +1,10 @@
 package org.example.junglebook.enums
 
-enum class DebateTopicStatus {
-    PREPARING,  // 준비중
-    DEBATING,   // 토론중
-    CLOSED,     // 토론 종료
-    VOTING      // 투표중
+enum class DebateTopicStatus(val value: Int) {
+    PREPARING(0),  // 준비중
+    DEBATING(1),   // 토론중
+    CLOSED(2),     // 토론 종료
+    VOTING(3)      // 투표중
 }
 
 enum class DebateTopicCategory {
