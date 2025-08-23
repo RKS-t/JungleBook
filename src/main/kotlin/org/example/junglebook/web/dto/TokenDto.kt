@@ -1,4 +1,4 @@
-package org.example.junglebook.dto
+package org.example.junglebook.web.dto
 
 data class TokenDto(
     val memberId: Long? = null,

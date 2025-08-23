@@ -1,5 +1,6 @@
 package org.example.junglebook.config
 
+import org.example.junglebook.filter.JwtAuthenticationFilter
 import org.example.junglebook.service.MemberService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean

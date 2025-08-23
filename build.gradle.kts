@@ -44,6 +44,14 @@ dependencies {
 
     implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
 
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+
+    runtimeOnly("com.mysql:mysql-connector-j")
+
+    implementation("commons-io:commons-io:2.11.0")
+
+    implementation("org.jsoup:jsoup:1.16.1")
+
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
     testImplementation("org.springframework.boot:spring-boot-starter-test")

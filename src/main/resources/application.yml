@@ -25,14 +25,17 @@ spring:
       pageable:
         default-page-size: 20
         max-page-size: 100
+    redis:
+      host: localhost
+      port: 6379
   datasource:
     hikari:
       main:
         pool-name: contents-hikari-pool
         driver-class-name: com.mysql.cj.jdbc.Driver
-        jdbc-url: jdbc:mysql://localhost:3306/wms?useSSL=false
-        username: wms
-        password: wms123!@#
+        jdbc-url: jdbc:mysql://localhost:3306/junglebook?useSSL=false
+        username: jgb
+        password: jgb123!@#
         connection-timeout: 30000
         minimum-idle: 2
         maximum-pool-size: 5

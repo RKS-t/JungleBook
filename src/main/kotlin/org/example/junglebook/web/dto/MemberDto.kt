@@ -1,10 +1,9 @@
-package org.example.junglebook.dto
+package org.example.junglebook.web.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import org.example.junglebook.entity.MemberEntity
 import org.example.junglebook.enums.Ideology
 import org.example.junglebook.enums.Sex
-import java.awt.color.ICC_Profile
 import java.time.LocalDateTime
 
 class MemberDto {

@@ -1,4 +1,4 @@
-package org.example.junglebook.controller
+package org.example.junglebook.web.controller
 
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -6,9 +6,9 @@ import jakarta.servlet.http.HttpServletResponse
 import kr.co.minust.api.exception.DefaultErrorCode
 import kr.co.minust.api.exception.GlobalException
 import org.example.junglebook.constant.JBConstants
-import org.example.junglebook.dto.LoginRequest
-import org.example.junglebook.dto.MemberDto
-import org.example.junglebook.dto.TokenDto
+import org.example.junglebook.web.dto.LoginRequest
+import org.example.junglebook.web.dto.MemberDto
+import org.example.junglebook.web.dto.TokenDto
 import org.example.junglebook.model.Member
 import org.example.junglebook.properties.JwtTokenProperties
 import org.example.junglebook.service.JwtService
@@ -26,8 +26,6 @@ import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import java.time.LocalDateTime
-
 
 @RestController
 @RequestMapping
@@ -62,22 +60,22 @@ class MemberController(
         @Parameter(hidden = true) @RequestHeader(value = HttpHeaders.AUTHORIZATION) authorization: String,
         response: HttpServletResponse
     ): ResponseEntity<TokenDto> {
-        val payload = jwtService.extractRefreshToken(authorization.substringAfter(JBConstants.BEARER))
+        val payload = jwtService.extractRefreshToken(authorization.substringAfter(JBConstants.Companion.BEARER))
         val member = memberService.findActivateMemberByLoginId(payload.loginId)
-        return ResponseEntity.ok(this.makeTokenWithoutRefreshToken(Member.from(member), response))
+        return ResponseEntity.ok(this.makeTokenWithoutRefreshToken(Member.Companion.from(member), response))
     }
 
     private fun makeToken(member: Member, response: HttpServletResponse): TokenDto {
         val accessToken = jwtService.generateToken(member, true)
         val refreshToken = jwtService.generateToken(member.setExpired(jwtTokenProperties.refreshToken), false)
-        response.setHeader(HttpHeaders.AUTHORIZATION, JBConstants.BEARER + accessToken)
+        response.setHeader(HttpHeaders.AUTHORIZATION, JBConstants.Companion.BEARER + accessToken)
         val info = memberService.myInfoByLoginId(member.loginId)
         return TokenDto(info!!.id!!, info.nickname, accessToken, refreshToken)
     }
 
     private fun makeTokenWithoutRefreshToken(member: Member, response: HttpServletResponse): TokenDto {
         val accessToken = jwtService.generateToken(member, true)
-        response.setHeader(HttpHeaders.AUTHORIZATION, JBConstants.BEARER + accessToken)
+        response.setHeader(HttpHeaders.AUTHORIZATION, JBConstants.Companion.BEARER + accessToken)
         return TokenDto(accessToken = accessToken)
     }
 

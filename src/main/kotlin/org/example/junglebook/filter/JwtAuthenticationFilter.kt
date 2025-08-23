@@ -1,15 +1,13 @@
-package org.example.junglebook.config
-
+package org.example.junglebook.filter
 
 import jakarta.servlet.FilterChain
 import jakarta.servlet.ServletException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST
 import kr.co.minust.api.exception.InvalidTokenException
 import org.example.junglebook.constant.JBConstants
 import org.example.junglebook.service.JwtService
-import org.springframework.http.HttpHeaders.AUTHORIZATION
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
@@ -26,8 +24,8 @@ class JwtAuthenticationFilter(val jwtService: JwtService): OncePerRequestFilter(
         response: HttpServletResponse,
         filterChain: FilterChain
     ) {
-        val authHeader = request.getHeader(AUTHORIZATION)
-        if (authHeader == null || !authHeader.startsWith(JBConstants.BEARER) || authHeader.substring(7).isEmpty()) {
+        val authHeader = request.getHeader(HttpHeaders.AUTHORIZATION)
+        if (authHeader == null || !authHeader.startsWith(JBConstants.Companion.BEARER) || authHeader.substring(7).isEmpty()) {
             filterChain.doFilter(request, response)
             return
         }
@@ -54,7 +52,7 @@ class JwtAuthenticationFilter(val jwtService: JwtService): OncePerRequestFilter(
                         response.status = exception.status.value()
                     }
                     else -> {
-                        response.status = SC_BAD_REQUEST
+                        response.status = HttpServletResponse.SC_BAD_REQUEST
                     }
                 }
 
