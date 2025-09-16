@@ -8,7 +8,7 @@ enum class DefaultErrorCode(
     val title: String,
     val description: String
 ) {
-    EMAIL_ALREADY_EXIST(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(),"회원가입 실패", "이메일이 이미 존재합니다."),
+    EMAIL_ALREADY_EXIST(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "회원가입 실패", "이메일이 이미 존재합니다."),
     LOGIN_FAILURE(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "로그인 실패", "잘못된 로그인 아이디 또는 비밀번호입니다."),
     DELETED_MEMBER(HttpStatus.NOT_FOUND, HttpStatus.NOT_FOUND.value().toString(), "삭제 회원", "삭제된 회원입니다."),
     INCORRECT_PASSWORDD(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "잘못된 비밀번호", "비밀번호를 잘못 입력하였습니다."),
@@ -20,9 +20,29 @@ enum class DefaultErrorCode(
     REPLY_EXISTS(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "댓글 존재", "댓글이 존재하여 삭제할 수 없습니다."),
     REPLY_NOT_FOUND(HttpStatus.NOT_FOUND, HttpStatus.NOT_FOUND.value().toString(), "댓글 없음", "댓글을 찾을 수 없습니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, HttpStatus.NOT_FOUND.value().toString(), "사용자 없음", "사용자를 찾을 수 없습니다."),
-    SYSTEM_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.value().toString(), "시스템 오류", "시스템 오류가 발생했습니다.")
-    ;
-    ;
+    SYSTEM_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.value().toString(), "시스템 오류", "시스템 오류가 발생했습니다."),
+
+    LOGIN_ID_ALREADY_EXIST(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "회원가입 실패", "로그인 ID가 이미 존재합니다."),
+    NICKNAME_ALREADY_EXIST(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "회원가입 실패", "닉네임이 이미 존재합니다."),
+    PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "비밀번호 불일치", "새 비밀번호가 일치하지 않습니다."),
+
+    SOCIAL_LOGIN_FAILURE(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "소셜 로그인 실패", "소셜 로그인 처리 중 오류가 발생했습니다."),
+    SOCIAL_ACCOUNT_ALREADY_LINKED(HttpStatus.CONFLICT, HttpStatus.CONFLICT.value().toString(), "계정 연동 실패", "이미 소셜 계정이 연동되어 있습니다."),
+    SOCIAL_ACCOUNT_LINKED_TO_OTHER(HttpStatus.CONFLICT, HttpStatus.CONFLICT.value().toString(), "계정 연동 실패", "이미 다른 계정에 연결된 소셜 계정입니다."),
+    SOCIAL_ACCOUNT_NOT_LINKED(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "연동 해제 실패", "연결된 소셜 계정이 없습니다."),
+    SOCIAL_ONLY_MEMBER_UNLINK_DENIED(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "연동 해제 불가", "소셜 전용 회원은 연동을 해제할 수 없습니다."),
+
+    SOCIAL_MEMBER_PASSWORD_CHANGE_DENIED(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "비밀번호 변경 불가", "소셜 회원은 비밀번호를 변경할 수 없습니다."),
+    CURRENT_PASSWORD_INCORRECT(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "현재 비밀번호 오류", "현재 비밀번호가 일치하지 않습니다."),
+
+    TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, HttpStatus.UNAUTHORIZED.value().toString(), "토큰 만료", "인증 토큰이 만료되었습니다."),
+    TOKEN_INVALID(HttpStatus.UNAUTHORIZED, HttpStatus.UNAUTHORIZED.value().toString(), "유효하지 않은 토큰", "인증 토큰이 유효하지 않습니다."),
+    REFRESH_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, HttpStatus.UNAUTHORIZED.value().toString(), "리프레시 토큰 만료", "리프레시 토큰이 만료되었습니다."),
+    REFRESH_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, HttpStatus.UNAUTHORIZED.value().toString(), "유효하지 않은 리프레시 토큰", "리프레시 토큰이 유효하지 않습니다."),
+
+    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, HttpStatus.NOT_FOUND.value().toString(), "회원 없음", "회원을 찾을 수 없습니다."),
+    UNAUTHORIZED_ACCESS(HttpStatus.UNAUTHORIZED, HttpStatus.UNAUTHORIZED.value().toString(), "인증 실패", "인증이 필요합니다."),
+    INSUFFICIENT_PERMISSION(HttpStatus.FORBIDDEN, HttpStatus.FORBIDDEN.value().toString(), "권한 부족", "해당 작업을 수행할 권한이 없습니다.");
 
     override fun toString(): String {
         return "$code:$title"

@@ -2,10 +2,12 @@ package org.example.junglebook.service
 
 import kr.co.minust.api.exception.DefaultErrorCode
 import kr.co.minust.api.exception.GlobalException
+import org.example.junglebook.entity.MemberCampHistoryEntity
 import org.example.junglebook.web.dto.MemberDto
 import org.example.junglebook.entity.MemberEntity
 import org.example.junglebook.enums.Ideology
 import org.example.junglebook.model.Member
+import org.example.junglebook.repository.MemberCampHistoryRepository
 import org.example.junglebook.repository.MemberRepository
 import org.example.junglebook.util.toBoolean
 import org.springframework.security.authentication.InternalAuthenticationServiceException
@@ -19,7 +21,8 @@ import java.time.LocalDateTime
 
 @Service
 class MemberService(
-    private val memberRepository: MemberRepository
+    private val memberRepository: MemberRepository,
+    private val memberCampHistoryRepository: MemberCampHistoryRepository
 ): UserDetailsService {
     @Throws(UsernameNotFoundException::class)
     override fun loadUserByUsername(loginId: String): UserDetails =
@@ -41,6 +44,8 @@ class MemberService(
             sex = member.sex,
             ideology = member.ideology,
             profile =  member.profileImage,
+            memberType = member.memberType,
+            socialProvider = member.socialProvider,
             createdAt = member.createdAt
         )
     }
@@ -77,7 +82,7 @@ class MemberService(
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun loginTest(loginId: String): MemberEntity {
         val memberEntity = memberRepository.findByLoginId(loginId)
-            ?: throw GlobalException("사용자를 찾을 수 없습니다.")
+            ?: throw GlobalException(DefaultErrorCode.USER_NOT_FOUND)
 
         memberRepository.updateLoginTime(memberEntity.id!!)
         return memberEntity
@@ -89,7 +94,7 @@ class MemberService(
 
         // 현재 이데올로지와 변경하려는 이데올로지가 동일한지 확인
         if (memberEntity.ideology == ideology) {
-            throw GlobalException("SAME_IDEOLOGY")
+            throw GlobalException(DefaultErrorCode.SAME_IDEOLOGY)
         }
 
         // 6개월 제한 체크
@@ -97,7 +102,7 @@ class MemberService(
         val now = LocalDateTime.now()
         latestHistory?.let { history ->
             if (history.createdAt.isAfter(now.minusMonths(6))) {
-                throw GlobalException("UNREACHED_TIME_TO_CHANGE_IDEOLOGY")
+                throw GlobalException(DefaultErrorCode.UNREACHED_TIME_TO_CHANGE_IDEOLOGY)
             }
         }
 

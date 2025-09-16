@@ -14,3 +14,13 @@ enum class Ideology(private val desc: String) {
     N ("NONE = 선택안함 혹은 없음")
     ;
 }
+
+enum class SocialProvider {
+    KAKAO,
+    NAVER
+}
+
+enum class MemberType {
+    REGULAR,    // 일반
+    SOCIAL      // Oauth
+}

@@ -52,6 +52,10 @@ dependencies {
 
     implementation("org.jsoup:jsoup:1.16.1")
 
+    //oauth
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
     testImplementation("org.springframework.boot:spring-boot-starter-test")

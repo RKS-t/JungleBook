@@ -9,7 +9,9 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import org.example.junglebook.enums.Ideology
+import org.example.junglebook.enums.MemberType
 import org.example.junglebook.enums.Sex
+import org.example.junglebook.enums.SocialProvider
 import java.time.LocalDateTime
 
 @Entity
@@ -21,24 +23,24 @@ data class MemberEntity(
     val id: Long? = null,
 
     @Column
-    val name: String,
+    var name: String,
 
     @Column
-    val birth: String,
+    var birth: String,
 
     @Column
-    val phoneNumber: String,
+    var phoneNumber: String,
 
     @Column(unique = true)
     var email: String,
 
     @Column
     @Enumerated(EnumType.STRING)
-    val sex: Sex,
+    var sex: Sex,
 
     @Column
     @Enumerated(EnumType.STRING)
-    val ideology: Ideology,
+    var ideology: Ideology,
 
     @Column(unique = true)
     val loginId: String,
@@ -50,7 +52,7 @@ data class MemberEntity(
     var password: String,
 
     @Column
-    val profileImage: String,
+    var profileImage: String,
 
     @Column
     var deleteYn: Int,
@@ -60,4 +62,16 @@ data class MemberEntity(
 
     @Column
     var updatedAt: LocalDateTime,
+
+    //Oauth
+    @Enumerated(EnumType.STRING)
+    @Column
+    var socialProvider: SocialProvider? = null,
+
+    @Column
+    var socialProviderId: String? = null,
+
+    @Enumerated(EnumType.STRING)
+    @Column
+    val memberType: MemberType = MemberType.REGULAR
 )

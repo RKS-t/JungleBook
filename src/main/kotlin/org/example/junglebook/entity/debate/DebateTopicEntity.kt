@@ -39,6 +39,9 @@ data class DebateTopicEntity(
     @Column(name = "hot_yn")
     var hotYn: Boolean = false,
 
+    @Column(name = "active_yn")
+    var activeYn: Boolean = true,
+
     // 토론 기간
     @Column(name = "start_date")
     val startDate: LocalDate? = null,
