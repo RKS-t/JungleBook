@@ -3,13 +3,14 @@ package org.example.junglebook.service
 import kr.co.minust.api.exception.DefaultErrorCode
 import kr.co.minust.api.exception.GlobalException
 import org.example.junglebook.entity.MemberCampHistoryEntity
-import org.example.junglebook.web.dto.MemberDto
 import org.example.junglebook.entity.MemberEntity
 import org.example.junglebook.enums.Ideology
 import org.example.junglebook.model.Member
 import org.example.junglebook.repository.MemberCampHistoryRepository
 import org.example.junglebook.repository.MemberRepository
 import org.example.junglebook.util.toBoolean
+import org.example.junglebook.web.dto.MemberDetailResponse
+import org.example.junglebook.web.dto.SignUpRequest
 import org.springframework.security.authentication.InternalAuthenticationServiceException
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
@@ -31,9 +32,9 @@ class MemberService(
     fun myInfoByLoginId(loginId: String) = memberRepository.findByLoginId(loginId)
 
     @Transactional(readOnly = true)
-    fun myInfoById(id: Long): MemberDto.MemberDetailResponse {
+    fun myInfoById(id: Long): MemberDetailResponse {
         val member = findActivateMemberById(id)
-        return MemberDto.MemberDetailResponse(
+        return MemberDetailResponse(
             id = member.id!!,
             loginId = member.loginId,
             name = member.name,
@@ -50,7 +51,7 @@ class MemberService(
         )
     }
     @Transactional
-    fun signUp(request: MemberDto.SignUpRequest) {
+    fun signUp(request: SignUpRequest) {
         val member = memberRepository.findFirstByEmail(request.email)
         if (member != null) {
             throw GlobalException(DefaultErrorCode.EMAIL_ALREADY_EXIST)

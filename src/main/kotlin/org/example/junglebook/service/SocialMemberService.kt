@@ -9,7 +9,9 @@ import org.example.junglebook.enums.MemberType
 import org.example.junglebook.enums.Sex
 import org.example.junglebook.enums.SocialProvider
 import org.example.junglebook.repository.MemberRepository
-import org.example.junglebook.web.dto.MemberDto
+import org.example.junglebook.web.dto.LoginResponse
+import org.example.junglebook.web.dto.SocialMemberResponse
+import org.example.junglebook.web.dto.SocialSignUpCompleteRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -93,8 +95,8 @@ class SocialMemberService(
     /**
      * 소셜 로그인 후 추가 정보 입력 완료
      */
-    fun completeSocialProfile(memberId: Long, request: MemberDto.SocialSignUpCompleteRequest): MemberEntity {
-        val member = memberService.findActivateMemberById(memberId)
+    fun completeSocialProfile(loginId: String, request: SocialSignUpCompleteRequest): MemberEntity {
+        val member = memberService.findActivateMemberByLoginId(loginId)
 
         if (member.memberType != MemberType.SOCIAL) {
             throw GlobalException(DefaultErrorCode.SOCIAL_ACCOUNT_NOT_LINKED)
@@ -180,8 +182,8 @@ class SocialMemberService(
      * 소셜 회원 응답 DTO 생성
      */
     @Transactional(readOnly = true)
-    fun createSocialMemberResponse(member: MemberEntity): MemberDto.SocialMemberResponse {
-        return MemberDto.SocialMemberResponse.from(member)
+    fun createSocialMemberResponse(member: MemberEntity): SocialMemberResponse {
+        return SocialMemberResponse.from(member)
     }
 
     /**
@@ -260,8 +262,8 @@ class SocialMemberService(
      * 소셜 로그인 결과 DTO 생성
      */
     @Transactional(readOnly = true)
-    fun createLoginResponse(member: MemberEntity): MemberDto.LoginResponse {
-        return MemberDto.LoginResponse.success(member)
+    fun createLoginResponse(member: MemberEntity): LoginResponse {
+        return LoginResponse.success(member)
     }
 
     /**

@@ -74,9 +74,9 @@ class DebateArgumentService(
 
         // 새 투표 저장 (반대 투표 삭제 로직 제거)
         val newVote = DebateVoteEntity(
-            member = member,
-            argument = argument,
-            reply = null,
+            memberId = memberId,
+            argumentId = argumentId,
+            replyId = null,
             voteType = voteType
         )
         debateVoteRepository.save(newVote)
