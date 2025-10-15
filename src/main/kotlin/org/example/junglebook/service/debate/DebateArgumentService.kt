@@ -20,25 +20,33 @@ import org.springframework.transaction.annotation.Isolation
 import org.springframework.transaction.annotation.Transactional
 
 
+
 @Service
 class DebateArgumentService(
     private val debateArgumentRepository: DebateArgumentRepository,
     private val debateFileRepository: DebateFileRepository,
-    private val debateVoteRepository: DebateVoteRepository,
-    private val memberRepository: MemberRepository
+    private val debateTopicService: DebateTopicService, // 추가
 ) {
 
+    /**
+     * 1. 인기 논증 목록 (입장별)
+     */
+    @Transactional(readOnly = true)
     fun popularList(topicId: Long): Map<ArgumentStance, List<DebateArgumentSimpleResponse>> {
         val popular = mutableMapOf<ArgumentStance, List<DebateArgumentSimpleResponse>>()
 
         ArgumentStance.values().forEach { stance ->
             val arguments = debateArgumentRepository.findPopularByStance(topicId, stance)
-            popular[stance] = DebateArgumentSimpleResponse.of(arguments)
+            popular[stance] = DebateArgumentSimpleResponse.of(arguments.take(5)) // 상위 5개만
         }
 
         return popular
     }
 
+    /**
+     * 2. 입장별 논증 페이징 목록
+     */
+    @Transactional(readOnly = true)
     fun pageableList(topicId: Long, stance: ArgumentStance, pageNo: Int, limit: Int): DebateArgumentListResponse {
         val totalCount = debateArgumentRepository.countByTopicIdAndStanceAndActiveYnTrue(topicId, stance)
         val pageable = PageRequest.of(pageNo, limit)
@@ -46,98 +54,133 @@ class DebateArgumentService(
             topicId, stance, pageable
         )
 
-        return DebateArgumentListResponse.of(totalCount, pageNo, list)
+        return DebateArgumentListResponse.of(totalCount.toInt(), pageNo, list)
     }
 
+    /**
+     * 3. 논증 상세 조회
+     */
+    @Transactional(readOnly = true)
     fun view(topicId: Long, id: Long): DebateArgumentResponse? {
         val argument = debateArgumentRepository.findByIdAndTopicIdAndActiveYnTrue(id, topicId)
         return argument?.let { DebateArgumentResponse.of(it) }
     }
 
+    /**
+     * 4. 조회수 증가
+     */
+    @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun increaseViewCount(id: Long) {
         debateArgumentRepository.increaseViewCount(id)
     }
 
+    /**
+     * 5. 논증 생성
+     */
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
-    fun vote(argumentId: Long, memberId: Long, voteType: VoteType): Boolean {
-        val member = memberRepository.findById(memberId)
-            .orElseThrow { GlobalException(DefaultErrorCode.USER_NOT_FOUND) }
-
-        val argument = debateArgumentRepository.findById(argumentId)
-            .orElseThrow { GlobalException(DefaultErrorCode.WRONG_ACCESS) }
-
-        // 동일한 타입의 투표가 이미 있는지만 확인
-        val existingVote = debateVoteRepository.findByMemberAndArgumentAndVoteType(member, argument, voteType)
-        if (existingVote != null) {
-            throw GlobalException(DefaultErrorCode.ALREADY_EXISTS)
-        }
-
-        // 새 투표 저장 (반대 투표 삭제 로직 제거)
-        val newVote = DebateVoteEntity(
-            memberId = memberId,
-            argumentId = argumentId,
-            replyId = null,
-            voteType = voteType
-        )
-        debateVoteRepository.save(newVote)
-
-        // 카운트 증가
-        val updateResult = when (voteType) {
-            VoteType.UPVOTE -> debateArgumentRepository.increaseSupportCount(argumentId)
-            VoteType.DOWNVOTE -> debateArgumentRepository.increaseOpposeCount(argumentId)
-        }
-
-        return updateResult > 0
-    }
-
-    @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
-    fun cancelVote(argumentId: Long, memberId: Long, voteType: VoteType): Boolean {
-        val member = memberRepository.findById(memberId)
-            .orElseThrow { GlobalException(DefaultErrorCode.USER_NOT_FOUND) }
-
-        val argument = debateArgumentRepository.findById(argumentId)
-            .orElseThrow { GlobalException(DefaultErrorCode.WRONG_ACCESS) }
-
-        val existingVote = debateVoteRepository.findByMemberAndArgumentAndVoteType(member, argument, voteType)
-            ?: throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
-
-        debateVoteRepository.delete(existingVote)
-
-        // 카운트 감소
-        val updateResult = when (voteType) {
-            VoteType.UPVOTE -> debateArgumentRepository.decreaseSupportCount(argumentId)
-            VoteType.DOWNVOTE -> debateArgumentRepository.decreaseOpposeCount(argumentId)
-        }
-
-        return updateResult > 0
-    }
-
-    @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
-    fun createArgument(entity: DebateArgumentEntity, fileIds: List<Long>?) {
+    fun createArgument(entity: DebateArgumentEntity, fileIds: List<Long>?): DebateArgumentResponse {
+        // 논증 저장
         val savedEntity = debateArgumentRepository.save(entity)
 
+        // 파일 첨부 처리
         fileIds?.forEach { fileId ->
             debateFileRepository.updateAttachStatus(
-                referenceType = DebateReferenceType.ARGUMENT,
-                referenceId = savedEntity.id!!,
-                fileId = fileId,
-                uploaderId = savedEntity.authorId
+                refType = DebateReferenceType.ARGUMENT.value,
+                refId = savedEntity.id!!,
+                id = fileId,
+                userId = savedEntity.authorId
             )
         }
+
+        // 토픽 논증 수 증가
+        debateTopicService.increaseArgumentCount(entity.topicId)
+
+        return DebateArgumentResponse.of(savedEntity)
     }
 
+    /**
+     * 7. 논증 삭제 (Soft Delete)
+     */
+    @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
+    fun deleteArgument(topicId: Long, id: Long, userId: Long): Boolean {
+        val argument = debateArgumentRepository.findByIdAndTopicIdAndActiveYnTrue(id, topicId)
+            ?: return false
+
+        // 권한 검증
+        if (argument.authorId != userId) {
+            throw IllegalAccessException("논증 삭제 권한이 없습니다.")
+        }
+
+        // Soft Delete
+        val result = debateArgumentRepository.softDelete(id, userId)
+
+        if (result > 0) {
+            // 토픽 논증 수 감소
+            debateTopicService.decreaseArgumentCount(topicId)
+            return true
+        }
+
+        return false
+    }
+
+    /**
+     * 8. 작성자별 논증 조회
+     */
+    @Transactional(readOnly = true)
     fun getArgumentsByAuthor(authorId: Long, pageNo: Int, limit: Int): DebateArgumentListResponse {
         val pageable = PageRequest.of(pageNo, limit)
         val list = debateArgumentRepository.findByAuthorIdAndActiveYnTrueOrderByCreatedAtDesc(authorId, pageable)
-        val totalCount = list.size // 간단한 구현, 실제로는 별도 카운트 쿼리 필요
+        val totalCount = debateArgumentRepository.countByAuthorIdAndActiveYnTrue(authorId)
 
-        return DebateArgumentListResponse.of(totalCount, pageNo, list)
+        return DebateArgumentListResponse.of(totalCount.toInt(), pageNo, list)
     }
 
+    /**
+     * 9. 토픽별 입장 통계
+     */
+    @Transactional(readOnly = true)
     fun getTopicStatistics(topicId: Long): Map<ArgumentStance, Int> {
         val statistics = debateArgumentRepository.countByTopicIdGroupByStance(topicId)
         return statistics.associate {
             (it[0] as ArgumentStance) to (it[1] as Long).toInt()
         }
+    }
+
+    /**
+     * 10. 지지 토글
+     */
+    @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
+    fun toggleSupport(id: Long, increase: Boolean): Boolean {
+        val result = if (increase) {
+            debateArgumentRepository.increaseSupportCount(id)
+        } else {
+            debateArgumentRepository.decreaseSupportCount(id)
+        }
+        return result > 0
+    }
+
+    /**
+     * 11. 반대 토글
+     */
+    @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
+    fun toggleOppose(id: Long, increase: Boolean): Boolean {
+        val result = if (increase) {
+            debateArgumentRepository.increaseOpposeCount(id)
+        } else {
+            debateArgumentRepository.decreaseOpposeCount(id)
+        }
+        return result > 0
+    }
+
+    /**
+     * 12. 토픽의 전체 논증 목록 (입장 구분 없이)
+     */
+    @Transactional(readOnly = true)
+    fun getAllArgumentsByTopic(topicId: Long, pageNo: Int, limit: Int): DebateArgumentListResponse {
+        val totalCount = debateArgumentRepository.countByTopicIdAndActiveYnTrue(topicId)
+        val pageable = PageRequest.of(pageNo, limit)
+        val list = debateArgumentRepository.findByTopicIdAndActiveYnTrueOrderByCreatedAtDesc(topicId, pageable)
+
+        return DebateArgumentListResponse.of(totalCount.toInt(), pageNo, list)
     }
 }

@@ -27,6 +27,6 @@ enum class VoteType {
     DOWNVOTE
 }
 
-enum class DebateReferenceType {
-    ARGUMENT, REPLY
+enum class DebateReferenceType(val value: Int) {
+    ARGUMENT(0), REPLY(1)
 }

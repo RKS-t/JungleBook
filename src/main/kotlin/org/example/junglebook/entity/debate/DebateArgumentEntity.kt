@@ -2,6 +2,7 @@ package org.example.junglebook.entity.debate
 
 import jakarta.persistence.*
 import org.example.junglebook.enums.ArgumentStance
+import org.example.junglebook.enums.VoteType
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.LastModifiedDate
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
@@ -38,7 +39,7 @@ data class DebateArgumentEntity(
     @Column(name = "content_html", columnDefinition = "TEXT")
     var contentHtml: String? = null,
 
-    // 작성자 닉네임 (성능을 위한 비정규화)
+    // 작성자 닉네임
     @Column(name = "author_nickname", length = 50)
     val authorNickname: String,
 

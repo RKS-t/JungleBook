@@ -195,3 +195,11 @@ data class LoginResponse(
         }
     }
 }
+
+// 중복 체크 응답 DTO
+data class DuplicateCheckResponse(
+    val field: String,        // 체크한 필드명 (loginId, email, nickname)
+    val value: String,        // 체크한 값
+    val isDuplicate: Boolean, // 중복 여부
+    val message: String       // 사용자 메시지
+)
