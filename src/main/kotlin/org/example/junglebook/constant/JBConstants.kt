@@ -10,6 +10,8 @@ class JBConstants {
 
         const val ZONE_ID_SEOUL = "Asia/Seoul"
         const val DEFAULT_EXPIRE_DAYS = 7L
+        const val ACCESS_TOKEN_EXPIRE_DAYS = 1L
+        const val REFRESH_TOKEN_EXPIRE_DAYS = 30L
 
         const val AmazonS3PublicUrl = "https://%s.s3.%s.amazonaws.com/%s"
 

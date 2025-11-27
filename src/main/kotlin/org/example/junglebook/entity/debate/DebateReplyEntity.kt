@@ -19,8 +19,8 @@ data class DebateReplyEntity(
     @Column(name = "argument_id", nullable = false)
     val argumentId: Long,
 
-    @Column(name = "author_id", nullable = false)
-    val authorId: Long,
+    @Column(name = "user_id", nullable = false)
+    val userId: Long,
 
     // 계층형 댓글을 위한 부모 ID
     @Column(name = "parent_id")
@@ -31,10 +31,10 @@ data class DebateReplyEntity(
     val depth: Int = 0,
 
     @Column(nullable = false, columnDefinition = "TEXT")
-    var content: String,
+    val content: String,
 
     @Column(name = "content_html", columnDefinition = "TEXT")
-    var contentHtml: String? = null,
+    val contentHtml: String? = null,
 
     // 작성자 닉네임 (비정규화)
     @Column(name = "author_nickname", length = 50)

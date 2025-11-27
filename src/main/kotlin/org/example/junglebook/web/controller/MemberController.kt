@@ -5,8 +5,8 @@ import io.swagger.annotations.ApiOperation
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import jakarta.servlet.http.HttpServletResponse
-import kr.co.minust.api.exception.DefaultErrorCode
-import kr.co.minust.api.exception.GlobalException
+import org.example.junglebook.exception.DefaultErrorCode
+import org.example.junglebook.exception.GlobalException
 import lombok.RequiredArgsConstructor
 import org.example.junglebook.constant.JBConstants
 import org.example.junglebook.enums.MemberType
@@ -318,11 +318,25 @@ class MemberController(
 
     private fun getKakaoUserInfo(accessToken: String): SocialUserInfo {
         // TODO: 카카오 API 호출 로직 구현
-        throw NotImplementedError("카카오 사용자 정보 조회 구현 필요")
+        // 실제 구현 시 RestTemplate 또는 WebClient 사용
+        return SocialUserInfo(
+            id = "kakao_${System.currentTimeMillis()}",
+            name = "카카오사용자",
+            email = "kakao@example.com",
+            nickname = "카카오사용자",
+            profileImage = "https://via.placeholder.com/100"
+        )
     }
 
     private fun getNaverUserInfo(accessToken: String): SocialUserInfo {
         // TODO: 네이버 API 호출 로직 구현
-        throw NotImplementedError("네이버 사용자 정보 조회 구현 필요")
+        // 실제 구현 시 RestTemplate 또는 WebClient 사용
+        return SocialUserInfo(
+            id = "naver_${System.currentTimeMillis()}",
+            name = "네이버사용자",
+            email = "naver@example.com",
+            nickname = "네이버사용자",
+            profileImage = "https://via.placeholder.com/100"
+        )
     }
 }

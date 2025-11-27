@@ -1,7 +1,7 @@
 package org.example.junglebook.service.debate
 
-import kr.co.minust.api.exception.DefaultErrorCode
-import kr.co.minust.api.exception.GlobalException
+import org.example.junglebook.exception.DefaultErrorCode
+import org.example.junglebook.exception.GlobalException
 import org.example.junglebook.entity.debate.DebateVoteEntity
 import org.example.junglebook.enums.VoteType
 import org.example.junglebook.repository.MemberRepository
@@ -27,7 +27,7 @@ class DebateVoteService (
             .orElseThrow { GlobalException(DefaultErrorCode.WRONG_ACCESS) }
 
         // 동일한 타입의 투표가 이미 있는지만 확인
-        val existingVote = debateVoteRepository.findByMemberAndArgumentAndVoteType(member, argument, voteType)
+        val existingVote = debateVoteRepository.findByMemberIdAndArgumentIdAndVoteType(memberId, argumentId, voteType)
         if (existingVote != null) {
             throw GlobalException(DefaultErrorCode.ALREADY_EXISTS)
         }

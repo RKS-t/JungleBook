@@ -18,7 +18,7 @@ data class PostReplyCreateRequest(
 
     val fileIds: List<Long>? = null
 ) {
-    fun toEntity(boardId: Int, postId: Long, memberId: Long, nickname: String): PostReplyEntity {
+    fun toEntity(boardId: Int, postId: Long, memberId: Long, authorNickname: String): PostReplyEntity {
         return PostReplyEntity(
             boardId = boardId,
             postId = postId,
@@ -26,8 +26,8 @@ data class PostReplyCreateRequest(
             content = contentHtml?.let { Jsoup.parse(it).body().text() } ?: "",
             contentHtml = contentHtml ?: "",
             fileYn = !fileIds.isNullOrEmpty(),
-            userId = memberId,  // MemberEntity의 id 사용
-            nickname = nickname
+            userId = memberId,
+            authorNickname = authorNickname
         )
     }
 }
@@ -38,7 +38,7 @@ data class PostReplyUpdateRequest(
 
     val fileIds: List<Long>? = null
 ) {
-    fun toEntity(boardId: Int, postId: Long, id: Long, memberId: Long, nickname: String): PostReplyEntity {
+    fun toEntity(boardId: Int, postId: Long, id: Long, memberId: Long, authorNickname: String): PostReplyEntity {
         return PostReplyEntity(
             id = id,
             boardId = boardId,
@@ -46,8 +46,8 @@ data class PostReplyUpdateRequest(
             content = contentHtml?.let { Jsoup.parse(it).body().text() } ?: "",
             contentHtml = contentHtml ?: "",
             fileYn = false,
-            userId = memberId,  // MemberEntity의 id 사용
-            nickname = nickname
+            userId = memberId,
+            authorNickname = authorNickname
         )
     }
 }
@@ -79,7 +79,7 @@ data class PostReplyResponse(
                 userId = entity.userId,  // MemberEntity의 id
                 useYn = entity.useYn,
                 fileYn = entity.fileYn,
-                nickname = entity.nickname,
+                nickname = entity.authorNickname,
                 content = entity.content,
                 contentHtml = entity.contentHtml,
                 like = entity.likeCnt,

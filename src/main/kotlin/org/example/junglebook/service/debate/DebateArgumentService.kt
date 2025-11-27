@@ -1,7 +1,7 @@
 package org.example.junglebook.service.debate
 
-import kr.co.minust.api.exception.DefaultErrorCode
-import kr.co.minust.api.exception.GlobalException
+import org.example.junglebook.exception.DefaultErrorCode
+import org.example.junglebook.exception.GlobalException
 import org.example.junglebook.entity.debate.DebateArgumentEntity
 import org.example.junglebook.entity.debate.DebateVoteEntity
 import org.example.junglebook.enums.ArgumentStance
@@ -11,6 +11,7 @@ import org.example.junglebook.repository.MemberRepository
 import org.example.junglebook.repository.debate.DebateArgumentRepository
 import org.example.junglebook.repository.debate.DebateFileRepository
 import org.example.junglebook.repository.debate.DebateVoteRepository
+import org.example.junglebook.service.fallacy.FallacyDetectionService
 import org.example.junglebook.web.dto.DebateArgumentListResponse
 import org.example.junglebook.web.dto.DebateArgumentResponse
 import org.example.junglebook.web.dto.DebateArgumentSimpleResponse
@@ -25,7 +26,8 @@ import org.springframework.transaction.annotation.Transactional
 class DebateArgumentService(
     private val debateArgumentRepository: DebateArgumentRepository,
     private val debateFileRepository: DebateFileRepository,
-    private val debateTopicService: DebateTopicService, // 추가
+    private val debateTopicService: DebateTopicService,
+    private val fallacyDetectionService: FallacyDetectionService
 ) {
 
     /**
@@ -79,6 +81,15 @@ class DebateArgumentService(
      */
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun createArgument(entity: DebateArgumentEntity, fileIds: List<Long>?): DebateArgumentResponse {
+        // 글자 수 제한 검증 (이중 체크)
+        val maxContentLength = 5000
+        if (entity.content.length > maxContentLength) {
+            throw GlobalException(
+                DefaultErrorCode.WRONG_ACCESS,
+                "논증 내용은 최대 ${maxContentLength}자까지 작성할 수 있습니다. (현재: ${entity.content.length}자)"
+            )
+        }
+        
         // 논증 저장
         val savedEntity = debateArgumentRepository.save(entity)
 
@@ -88,12 +99,34 @@ class DebateArgumentService(
                 refType = DebateReferenceType.ARGUMENT.value,
                 refId = savedEntity.id!!,
                 id = fileId,
-                userId = savedEntity.authorId
+                userId = savedEntity.userId
             )
         }
 
         // 토픽 논증 수 증가
         debateTopicService.increaseArgumentCount(entity.topicId)
+
+        // 토픽 정보 조회
+        val topic = debateTopicService.getTopicDetail(entity.topicId, increaseView = false)
+
+        // 논리 오류 탐지 (비동기)
+        fallacyDetectionService.detectFallacyAsync(
+            text = savedEntity.content,
+            language = "ko",
+            topicTitle = topic?.topic?.title,
+            topicDescription = topic?.topic?.description
+        ).thenAccept { result ->
+                result?.let {
+                    savedEntity.apply {
+                        fallacyHasFallacy = it.hasFallacy
+                        fallacyType = it.fallacyType
+                        fallacyConfidence = it.confidence
+                        fallacyExplanation = it.explanation
+                        fallacyCheckedYn = true
+                    }
+                    debateArgumentRepository.save(savedEntity)
+                }
+            }
 
         return DebateArgumentResponse.of(savedEntity)
     }
@@ -107,8 +140,8 @@ class DebateArgumentService(
             ?: return false
 
         // 권한 검증
-        if (argument.authorId != userId) {
-            throw IllegalAccessException("논증 삭제 권한이 없습니다.")
+        if (argument.userId != userId) {
+            throw GlobalException(DefaultErrorCode.DEBATE_ARGUMENT_DELETE_DENIED)
         }
 
         // Soft Delete
@@ -127,10 +160,10 @@ class DebateArgumentService(
      * 8. 작성자별 논증 조회
      */
     @Transactional(readOnly = true)
-    fun getArgumentsByAuthor(authorId: Long, pageNo: Int, limit: Int): DebateArgumentListResponse {
+    fun getArgumentsByAuthor(userId: Long, pageNo: Int, limit: Int): DebateArgumentListResponse {
         val pageable = PageRequest.of(pageNo, limit)
-        val list = debateArgumentRepository.findByAuthorIdAndActiveYnTrueOrderByCreatedAtDesc(authorId, pageable)
-        val totalCount = debateArgumentRepository.countByAuthorIdAndActiveYnTrue(authorId)
+        val list = debateArgumentRepository.findByUserIdAndActiveYnTrueOrderByCreatedAtDesc(userId, pageable)
+        val totalCount = debateArgumentRepository.countByUserIdAndActiveYnTrue(userId)
 
         return DebateArgumentListResponse.of(totalCount.toInt(), pageNo, list)
     }

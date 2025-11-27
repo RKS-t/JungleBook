@@ -1,7 +1,7 @@
 package org.example.junglebook.service.post
 
-import kr.co.minust.api.exception.DefaultErrorCode
-import kr.co.minust.api.exception.GlobalException
+import org.example.junglebook.exception.DefaultErrorCode
+import org.example.junglebook.exception.GlobalException
 import org.apache.commons.io.FilenameUtils
 import org.example.junglebook.entity.post.BoardEntity
 import org.example.junglebook.entity.post.PostCountHistoryEntity
@@ -12,7 +12,8 @@ import org.example.junglebook.enums.post.PostReferenceType
 import org.example.junglebook.repository.post.PostCountHistoryRepository
 import org.example.junglebook.repository.post.PostFileRepository
 import org.example.junglebook.repository.post.PostRepository
-import org.example.junglebook.web.dto.PostListResponse
+import org.example.junglebook.service.MemberService
+import org.example.junglebook.web.dto.*
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Isolation
@@ -26,7 +27,9 @@ class PostService(
     private val postRepository: PostRepository,
     private val postCountHistoryRepository: PostCountHistoryRepository,
     private val postFileRepository: PostFileRepository,
-    private val s3Service: S3Service
+    private val memberService: MemberService
+    // TODO: S3Service 구현 필요
+    // private val s3Service: S3Service
 ) {
 
     @Transactional(readOnly = true)
@@ -44,8 +47,8 @@ class PostService(
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
-    fun increaseViewCount(boardId: Int, id: Long) {
-        postRepository.increaseViewCount(boardId, id)
+    fun increaseViewCount(id: Long) {
+        postRepository.increaseViewCount(id)
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
@@ -59,8 +62,11 @@ class PostService(
         }
 
         val updateResult = when (countType) {
-            CountType.LIKE -> postRepository.increaseLikeCount(board.id!!, id)
-            CountType.DISLIKE -> postRepository.increaseDislikeCount(board.id!!, id)
+            CountType.LIKE -> postRepository.increaseLikeCount(id)
+            CountType.DISLIKE -> {
+                // 싫어요는 PostLikeEntity로 관리하지 않으므로 별도 처리 필요
+                throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "싫어요 기능은 PostLikeEntity로 관리되지 않습니다.")
+            }
             else -> throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
         }
 
@@ -87,6 +93,23 @@ class PostService(
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
+    fun createPost(boardId: Int, request: PostCreateRequest, userId: Long): PostResponse {
+        val entity = request.toEntity(boardId, userId, request.authorNickname ?: "익명")
+        val savedEntity = postRepository.save(entity)
+
+        request.fileIds?.forEach { fileId ->
+            postFileRepository.updateAttachStatus(
+                refType = PostReferenceType.POST.value,
+                refId = savedEntity.id!!,
+                id = fileId,
+                userId = savedEntity.userId
+            )
+        }
+        
+        return PostResponse.of(savedEntity)
+    }
+
+    @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun createPost(entity: PostEntity, fileIds: List<Long>?) {
         val savedEntity = postRepository.save(entity)
 
@@ -98,6 +121,103 @@ class PostService(
                 userId = savedEntity.userId
             )
         }
+    }
+
+    @Transactional(readOnly = true)
+    fun getPostDetail(postId: Long, increaseView: Boolean = true): PostDetailResponse? {
+        val post = postRepository.findByIdAndUseYnTrue(postId) ?: return null
+        
+        if (increaseView) {
+            postRepository.increaseViewCount(postId)
+        }
+        
+        val files = emptyList<PostFileResponse>() // TODO: 파일 조회 구현
+        
+        return PostDetailResponse(
+            post = PostResponse.of(post),
+            files = files
+        )
+    }
+
+    @Transactional(readOnly = true)
+    fun getPostList(
+        boardId: Int,
+        sortType: PostSortType,
+        pageNo: Int,
+        limit: Int,
+        keyword: String?
+    ): PostListResponse {
+        val pageable = PageRequest.of(pageNo, limit)
+        
+        val posts = when (sortType) {
+            PostSortType.LATEST -> {
+                if (keyword != null) {
+                    postRepository.searchByKeyword(boardId, keyword, pageable)
+                } else {
+                    postRepository.findByBoardIdAndUseYnTrueOrderByNoticeYnDescCreatedDtDesc(boardId, pageable)
+                }
+            }
+            PostSortType.POPULAR -> {
+                postRepository.findPopularByBoardId(boardId, pageable)
+            }
+            PostSortType.MOST_VIEWED -> {
+                // TODO: 조회수순 구현
+                postRepository.findByBoardIdAndUseYnTrueOrderByNoticeYnDescCreatedDtDesc(boardId, pageable)
+            }
+            PostSortType.MOST_LIKED -> {
+                // TODO: 좋아요순 구현
+                postRepository.findByBoardIdAndUseYnTrueOrderByNoticeYnDescCreatedDtDesc(boardId, pageable)
+            }
+        }
+        
+        val totalCount = postRepository.countByBoardIdAndUseYnTrue(boardId).toInt()
+        
+        return PostListResponse.of(totalCount, pageNo, posts)
+    }
+
+    @Transactional(readOnly = true)
+    fun getPopularPosts(boardId: Int, limit: Int): List<PostSimpleResponse> {
+        val pageable = PageRequest.of(0, limit)
+        val posts = postRepository.findPopularByBoardId(boardId, pageable)
+        return PostSimpleResponse.of(posts)
+    }
+
+    @Transactional(readOnly = true)
+    fun getPostsByAuthor(userId: Long, pageNo: Int, limit: Int): PostListResponse {
+        val pageable = PageRequest.of(pageNo, limit)
+        val posts = postRepository.findByUserIdAndUseYnTrueOrderByCreatedDtDesc(userId, pageable)
+        val totalCount = postRepository.countByBoardIdAndUseYnTrue(0).toInt() // TODO: 작성자별 개수 조회 구현
+        
+        return PostListResponse.of(totalCount, pageNo, posts)
+    }
+
+    @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
+    fun updatePost(postId: Long, request: PostUpdateRequest, userId: Long): PostResponse? {
+        val post = postRepository.findByIdAndUseYnTrue(postId) ?: return null
+        
+        if (post.userId != userId) {
+            throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "작성자만 수정할 수 있습니다.")
+        }
+        
+        request.title?.let { post.title = it }
+        request.content?.let { post.content = it }
+        request.contentHtml?.let { post.contentHtml = it }
+        
+        val saved = postRepository.save(post)
+        return PostResponse.of(saved)
+    }
+
+    @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
+    fun deletePost(postId: Long, userId: Long): Boolean {
+        val post = postRepository.findByIdAndUseYnTrue(postId) ?: return false
+        
+        if (post.userId != userId) {
+            throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "작성자만 삭제할 수 있습니다.")
+        }
+        
+        post.softDelete()
+        postRepository.save(post)
+        return true
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
@@ -124,7 +244,9 @@ class PostService(
                 String.format("%06d", ThreadLocalRandom.current().nextInt(1000000)) +
                 ".${FilenameUtils.getExtension(file.originalFilename)}"
 
-        val url = s3Service.saveFile(file, "/post/$boardId/$newFileName")
+        // TODO: S3Service 구현 후 활성화
+        // val url = s3Service.saveFile(file, "/post/$boardId/$newFileName")
+        val url = "/temp/post/$boardId/$newFileName" // 임시 URL
 
         val entity = PostFileEntity(
             url = url,

@@ -2,7 +2,6 @@ package org.example.junglebook.entity.debate
 
 import jakarta.persistence.*
 import org.example.junglebook.enums.ArgumentStance
-import org.example.junglebook.enums.VoteType
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.LastModifiedDate
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
@@ -23,21 +22,21 @@ data class DebateArgumentEntity(
     @Column(name = "topic_id", nullable = false)
     val topicId: Long,
 
-    @Column(name = "author_id", nullable = false)
-    val authorId: Long,
+    @Column(name = "user_id", nullable = false)
+    val userId: Long,
 
     @Enumerated(EnumType.STRING)
     @Column(name = "stance", nullable = false)
     val stance: ArgumentStance,
 
     @Column(nullable = false, length = 200)
-    var title: String,
+    val title: String,
 
     @Column(nullable = false, columnDefinition = "TEXT")
-    var content: String,
+    val content: String,
 
     @Column(name = "content_html", columnDefinition = "TEXT")
-    var contentHtml: String? = null,
+    val contentHtml: String? = null,
 
     // 작성자 닉네임
     @Column(name = "author_nickname", length = 50)
@@ -65,6 +64,22 @@ data class DebateArgumentEntity(
 
     @Column(name = "reply_count")
     var replyCount: Int = 0,
+
+    // 논리 오류 판단 결과
+    @Column(name = "fallacy_has_fallacy")
+    var fallacyHasFallacy: Boolean? = null,
+
+    @Column(name = "fallacy_type", length = 50)
+    var fallacyType: String? = null,
+
+    @Column(name = "fallacy_confidence")
+    var fallacyConfidence: Double? = null,
+
+    @Column(name = "fallacy_explanation", columnDefinition = "TEXT")
+    var fallacyExplanation: String? = null,
+
+    @Column(name = "fallacy_checked_yn")
+    var fallacyCheckedYn: Boolean = false,
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)

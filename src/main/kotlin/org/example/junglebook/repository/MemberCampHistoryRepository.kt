@@ -14,10 +14,9 @@ interface MemberCampHistoryRepository : JpaRepository<MemberCampHistoryEntity, L
     @Query("""
         SELECT h FROM MemberCampHistoryEntity h 
         WHERE h.memberId = :memberId 
-        ORDER BY h.createdAt DESC 
-        LIMIT 1
+        ORDER BY h.createdAt DESC
     """)
-    fun findLatestByMemberId(@Param("memberId") memberId: Long): MemberCampHistoryEntity?
+    fun findLatestByMemberId(@Param("memberId") memberId: Long): List<MemberCampHistoryEntity>
 
     // 특정 회원의 모든 이데올로기 변경 히스토리 조회 (최신순)
     @Query("""

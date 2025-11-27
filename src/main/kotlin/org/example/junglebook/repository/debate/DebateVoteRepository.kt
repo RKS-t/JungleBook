@@ -47,8 +47,6 @@ interface DebateVoteRepository : JpaRepository<DebateVoteEntity, Long> {
     // 특정 댓글에 대한 모든 투표 조회
     fun findByReplyIdOrderByCreatedAtDesc(replyId: Long): List<DebateVoteEntity>
 
-    fun findByMemberAndArgumentAndVoteType(member: MemberEntity, argument: DebateArgumentEntity, voteType: VoteType)
-
     // 중복 투표 방지를 위한 복합 조회 (주장)
     fun findByMemberIdAndArgumentIdAndVoteTypeIn(
         memberId: Long,

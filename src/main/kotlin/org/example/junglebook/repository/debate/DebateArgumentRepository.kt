@@ -68,16 +68,16 @@ interface DebateArgumentRepository : JpaRepository<DebateArgumentEntity, Long> {
     // 작성자별 주장 조회
     @Query("""
         SELECT a FROM DebateArgumentEntity a 
-        WHERE a.authorId = :authorId AND a.activeYn = true 
+        WHERE a.userId = :userId AND a.activeYn = true 
         ORDER BY a.createdAt DESC
     """)
-    fun findByAuthorIdAndActiveYnTrueOrderByCreatedAtDesc(
-        @Param("authorId") authorId: Long,
+    fun findByUserIdAndActiveYnTrueOrderByCreatedAtDesc(
+        @Param("userId") userId: Long,
         pageable: Pageable
     ): List<DebateArgumentEntity>
 
     // 작성자별 주장 개수
-    fun countByAuthorIdAndActiveYnTrue(authorId: Long): Long
+    fun countByUserIdAndActiveYnTrue(userId: Long): Long
 
     // ===== 통계 =====
 
@@ -151,7 +151,15 @@ interface DebateArgumentRepository : JpaRepository<DebateArgumentEntity, Long> {
     @Query("""
         UPDATE DebateArgumentEntity a 
         SET a.activeYn = false, a.updatedAt = CURRENT_TIMESTAMP 
-        WHERE a.id = :id AND a.authorId = :authorId
+        WHERE a.id = :id AND a.userId = :userId
     """)
-    fun softDelete(@Param("id") id: Long, @Param("authorId") authorId: Long): Int
+    fun softDelete(@Param("id") id: Long, @Param("userId") userId: Long): Int
+
+    @Modifying
+    @Query("UPDATE DebateArgumentEntity a SET a.replyCount = a.replyCount + 1 WHERE a.id = :id")
+    fun increaseReplyCount(@Param("id") id: Long): Int
+
+    @Modifying
+    @Query("UPDATE DebateArgumentEntity a SET a.replyCount = GREATEST(0, a.replyCount - 1) WHERE a.id = :id")
+    fun decreaseReplyCount(@Param("id") id: Long): Int
 }

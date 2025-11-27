@@ -8,7 +8,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "board")
+@Table(name = "board", indexes = [
+    Index(name = "idx_use_yn", columnList = "use_yn"),
+    Index(name = "idx_type", columnList = "type")
+])
 @EntityListeners(AuditingEntityListener::class)
 data class BoardEntity(
     @Id

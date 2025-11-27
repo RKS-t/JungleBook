@@ -1,0 +1,51 @@
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL
+    username: sa
+    password: 
+    hikari:
+      pool-name: test-hikari-pool
+      connection-timeout: 30000
+      minimum-idle: 1
+      maximum-pool-size: 2
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      auto-commit: true
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  h2:
+    console:
+      enabled: true
+
+# JWT 설정 (테스트용)
+jwt:
+  signing:
+    key: 53d2a25eb85f8cc5452aebbf05ff7f1bc280bd26e6a3a805cfce346986562e34
+  expire-days:
+    access-token: 1
+    refresh-token: 7
+
+# HTTP 설정 (테스트용)
+http:
+  permit:
+    uris: /api/login,/api/signup,/api/signup-and-login,/api/social-login,/api/social-signup,/api/check/**,/api/health,/swagger-ui/**,/v3/api-docs/**,/swagger-resources/**,/webjars/**,/actuator/health
+
+logging:
+  level:
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.example.junglebook: DEBUG
+
+
+
+
+
+

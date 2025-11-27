@@ -7,7 +7,12 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "post")
+@Table(name = "post", indexes = [
+    Index(name = "idx_board_created", columnList = "board_id, created_dt"),
+    Index(name = "idx_user_created", columnList = "user_id, created_dt"),
+    Index(name = "idx_notice_created", columnList = "notice_yn, created_dt"),
+    Index(name = "idx_use_yn", columnList = "use_yn")
+])
 @EntityListeners(AuditingEntityListener::class)
 data class PostEntity(
     @Id
@@ -20,8 +25,8 @@ data class PostEntity(
     @Column(name = "seq_no")
     val seqNo: Long? = null,
 
-    @Column(name = "user_id")
-    val userId: Long? = null,
+    @Column(name = "user_id", nullable = false)
+    val userId: Long,
 
     @Column(name = "notice_yn")
     var noticeYn: Boolean = false,
@@ -32,17 +37,17 @@ data class PostEntity(
     @Column(name = "file_yn")
     val fileYn: Boolean = false,
 
-    @Column(name = "nickname", length = 50)
-    val nickname: String? = null,
+    @Column(name = "author_nickname", length = 50)
+    val authorNickname: String,
 
     @Column(name = "title", length = 200, nullable = false)
-    val title: String,
+    var title: String,
 
     @Column(name = "content", columnDefinition = "TEXT", nullable = false)
-    val content: String,
+    var content: String,
 
     @Column(name = "content_html", columnDefinition = "TEXT")
-    val contentHtml: String? = null,
+    var contentHtml: String? = null,
 
     @Column(name = "view_cnt")
     var viewCnt: Int = 0,

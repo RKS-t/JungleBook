@@ -1,10 +1,18 @@
 package org.example.junglebook.entity.post
 
-
 import jakarta.persistence.*
+import org.springframework.data.annotation.CreatedDate
+import org.springframework.data.annotation.LastModifiedDate
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
+import java.time.LocalDateTime
 
 @Entity
-@Table(name = "post_file")
+@Table(name = "post_file", indexes = [
+    Index(name = "idx_ref_type_id", columnList = "ref_type, ref_id"),
+    Index(name = "idx_user_id", columnList = "user_id"),
+    Index(name = "idx_attach_yn", columnList = "attach_yn")
+])
+@EntityListeners(AuditingEntityListener::class)
 data class PostFileEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,5 +40,13 @@ data class PostFileEntity(
     val fileName: String? = null,
 
     @Column(name = "url", length = 500)
-    val url: String? = null
+    val url: String? = null,
+
+    @CreatedDate
+    @Column(name = "created_at", updatable = false, nullable = false)
+    val createdAt: LocalDateTime = LocalDateTime.now(),
+
+    @LastModifiedDate
+    @Column(name = "updated_at", nullable = false)
+    var updatedAt: LocalDateTime = LocalDateTime.now()
 )

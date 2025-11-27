@@ -1,0 +1,54 @@
+# Gradle
+.gradle/
+build/
+!build/libs/
+gradle/
+gradlew
+gradlew.bat
+gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.cursor/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+HELP.md
+*.md
+
+# Docker
+docker/
+.dockerignore
+
+# Test
+src/test/
+
+# Build artifacts
+*.jar
+*.war
+*.ear
+!build/libs/*.jar
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+

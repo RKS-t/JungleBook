@@ -73,39 +73,78 @@ interface PostRepository : JpaRepository<PostEntity, Long> {
 
     override fun findById(id: Long): Optional<PostEntity>
 
+    // 기본 조회
+    fun findByIdAndUseYnTrue(id: Long): PostEntity?
+
+    // 게시판별 게시글 조회
+    fun findByBoardIdAndUseYnTrueOrderByNoticeYnDescCreatedDtDesc(
+        boardId: Int,
+        pageable: Pageable
+    ): List<PostEntity>
+
+    // 작성자별 게시글 조회
+    fun findByUserIdAndUseYnTrueOrderByCreatedDtDesc(
+        userId: Long,
+        pageable: Pageable
+    ): List<PostEntity>
+
+    // 인기 게시글 조회 (좋아요 + 조회수)
+    @Query("""
+        SELECT p FROM PostEntity p 
+        WHERE p.boardId = :boardId AND p.useYn = true 
+        ORDER BY (p.likeCnt + p.viewCnt) DESC, p.createdDt DESC
+    """)
+    fun findPopularByBoardId(
+        @Param("boardId") boardId: Int,
+        pageable: Pageable
+    ): List<PostEntity>
+
+    // 검색
+    @Query("""
+        SELECT p FROM PostEntity p 
+        WHERE p.boardId = :boardId AND p.useYn = true 
+        AND (:keyword IS NULL OR 
+             LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR 
+             LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        ORDER BY p.noticeYn DESC, p.createdDt DESC
+    """)
+    fun searchByKeyword(
+        @Param("boardId") boardId: Int,
+        @Param("keyword") keyword: String?,
+        pageable: Pageable
+    ): List<PostEntity>
+
+    // 게시글 개수
+    fun countByBoardIdAndUseYnTrue(boardId: Int): Long
+
+    // 조회수 증가
     @Modifying
     @Query("UPDATE PostEntity p SET p.viewCnt = p.viewCnt + 1, p.updatedDt = CURRENT_TIMESTAMP " +
-            "WHERE p.id = :id AND p.boardId = :boardId")
-    fun increaseViewCount(@Param("boardId") boardId: Int, @Param("id") id: Long): Int
+            "WHERE p.id = :id")
+    fun increaseViewCount(@Param("id") id: Long): Int
 
+    // 좋아요 수 증가/감소
     @Modifying
     @Query("UPDATE PostEntity p SET p.likeCnt = p.likeCnt + 1, p.updatedDt = CURRENT_TIMESTAMP " +
-            "WHERE p.id = :id AND p.boardId = :boardId")
-    fun increaseLikeCount(@Param("boardId") boardId: Int, @Param("id") id: Long): Int
+            "WHERE p.id = :id")
+    fun increaseLikeCount(@Param("id") id: Long): Int
 
     @Modifying
-    @Query("UPDATE PostEntity p SET p.dislikeCnt = p.dislikeCnt + 1, p.updatedDt = CURRENT_TIMESTAMP " +
-            "WHERE p.id = :id AND p.boardId = :boardId")
-    fun increaseDislikeCount(@Param("boardId") boardId: Int, @Param("id") id: Long): Int
+    @Query("UPDATE PostEntity p SET p.likeCnt = GREATEST(0, p.likeCnt - 1), p.updatedDt = CURRENT_TIMESTAMP " +
+            "WHERE p.id = :id")
+    fun decreaseLikeCount(@Param("id") id: Long): Int
 
+    // 댓글 수 증가/감소
     @Modifying
     @Query("UPDATE PostEntity p SET p.replyCnt = p.replyCnt + 1, p.updatedDt = CURRENT_TIMESTAMP " +
-            "WHERE p.id = :id AND p.boardId = :boardId")
-    fun increaseReplyCount(@Param("boardId") boardId: Int, @Param("id") id: Long): Int
+            "WHERE p.id = :id")
+    fun increaseReplyCount(@Param("id") id: Long): Int
 
     @Modifying
-    @Query("UPDATE PostEntity p SET p.replyCnt = p.replyCnt - 1, p.updatedDt = CURRENT_TIMESTAMP " +
-            "WHERE p.id = :id AND p.boardId = :boardId AND p.replyCnt > 0")
-    fun decreaseReplyCount(@Param("boardId") boardId: Int, @Param("id") id: Long): Int
+    @Query("UPDATE PostEntity p SET p.replyCnt = GREATEST(0, p.replyCnt - 1), p.updatedDt = CURRENT_TIMESTAMP " +
+            "WHERE p.id = :id")
+    fun decreaseReplyCount(@Param("id") id: Long): Int
 
-    @Modifying
-    @Query("UPDATE PostEntity p SET p.useYn = false, p.updatedDt = CURRENT_TIMESTAMP " +
-            "WHERE p.boardId = :boardId AND p.seqNo = :seqNo AND p.userId = :userId")
-    fun softDeleteBySeqNo(
-        @Param("boardId") boardId: Int,
-        @Param("seqNo") seqNo: Long,
-        @Param("userId") userId: Long
-    ): Int
-
-    fun findByBoardIdAndNoticeYnTrueOrderByCreatedDtDesc(boardId: Int): List<PostEntity>
+    // 공지사항 조회
+    fun findByBoardIdAndNoticeYnTrueAndUseYnTrueOrderByCreatedDtDesc(boardId: Int): List<PostEntity>
 }

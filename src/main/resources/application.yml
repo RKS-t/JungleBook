@@ -11,6 +11,20 @@ jwt:
     access-token: 7
     refresh-token: 365
 
+http:
+  permit:
+    uris: /api/login,/api/signup,/api/signup-and-login,/api/social-login,/api/social-signup,/api/check/**,/api/health,/swagger-ui/**,/v3/api-docs/**,/swagger-resources/**,/webjars/**,/actuator/health
+
+fallacy:
+  detection:
+    service:
+      url: http://localhost:8000/api/v1
+      timeout: 5000
+    appeal:
+      threshold: 100
+    translation:
+      enabled: true
+
 spring:
   security:
     oauth2:
@@ -69,28 +83,29 @@ spring:
       host: localhost
       port: 6379
   datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:13306/junglebook?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
+    username: junglebook
+    password: junglebook123!@#
     hikari:
-      main:
-        pool-name: contents-hikari-pool
-        driver-class-name: com.mysql.cj.jdbc.Driver
-        jdbc-url: jdbc:mysql://localhost:3306/junglebook?useSSL=false
-        username: jgb
-        password: jgb123!@#
-        connection-timeout: 30000
-        minimum-idle: 2
-        maximum-pool-size: 5
-        idle-timeout: 0
-        max-lifetime: 1800000
-        auto-commit: false
-        connection-test-query: SELECT 1
+      pool-name: contents-hikari-pool
+      connection-timeout: 30000
+      minimum-idle: 2
+      maximum-pool-size: 5
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      auto-commit: true
+      connection-test-query: SELECT 1
   jpa:
     database: mysql
     database-platform: org.hibernate.dialect.MySQL8Dialect
     open-in-view: false
-    properties.hibernate:
-      dialect: org.hibernate.dialect.MySQLDialect
-      hbm2ddl.auto: none
-      enable_lazy_load_no_trans: false
-      implicit_naming_strategy: org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy
-      physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
-      default_batch_fetch_size: 100
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        enable_lazy_load_no_trans: false
+        implicit_naming_strategy: org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy
+        physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+        default_batch_fetch_size: 100

@@ -1,0 +1,66 @@
+# 개발 환경 설정
+spring:
+  profiles:
+    active: dev
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:13306/junglebook?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    username: junglebook
+    password: junglebook123!@#
+    hikari:
+      pool-name: dev-hikari-pool
+      connection-timeout: 30000
+      minimum-idle: 1
+      maximum-pool-size: 3
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      auto-commit: true
+      connection-test-query: SELECT 1
+  jpa:
+    database: mysql
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+        enable_lazy_load_no_trans: false
+        implicit_naming_strategy: org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy
+        physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+        default_batch_fetch_size: 100
+  redis:
+    host: localhost
+    port: 6379
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+
+# JWT 설정 (개발용)
+jwt:
+  signing:
+    key: 53d2a25eb85f8cc5452aebbf05ff7f1bc280bd26e6a3a805cfce346986562e34
+  expire-days:
+    access-token: 1
+    refresh-token: 30
+
+# HTTP 설정 (개발용)
+http:
+  permit:
+    uris: /api/login,/api/signup,/api/signup-and-login,/api/social-login,/api/social-signup,/api/check/**,/api/health,/swagger-ui/**,/v3/api-docs/**,/swagger-resources/**,/webjars/**,/actuator/health,/h2-console/**
+
+# 로깅 설정 (개발용)
+logging:
+  level:
+    root: INFO
+    org.example.junglebook: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  config: classpath:logback.xml

@@ -1,6 +1,7 @@
 package org.example.junglebook.service.debate
 
-
+import org.example.junglebook.exception.DefaultErrorCode
+import org.example.junglebook.exception.GlobalException
 import org.example.junglebook.enums.ArgumentStance
 import org.example.junglebook.enums.DebateTopicCategory
 import org.example.junglebook.enums.DebateTopicStatus
@@ -216,7 +217,7 @@ class DebateTopicService(
 
         // 권한 검증 (작성자만 수정 가능)
         if (topic.creatorId != userId) {
-            throw IllegalAccessException("토픽 수정 권한이 없습니다.")
+            throw GlobalException(DefaultErrorCode.DEBATE_TOPIC_MODIFY_DENIED)
         }
 
         // 업데이트
@@ -245,7 +246,7 @@ class DebateTopicService(
 
         // 권한 검증
         if (topic.creatorId != userId) {
-            throw IllegalAccessException("토픽 삭제 권한이 없습니다.")
+            throw GlobalException(DefaultErrorCode.DEBATE_TOPIC_DELETE_DENIED)
         }
 
         val deleted = topic.copy(activeYn = false, updatedAt = LocalDateTime.now())
@@ -333,7 +334,7 @@ class DebateTopicService(
         val topic = debateTopicRepository.findByIdAndActiveYnTrue(topicId) ?: return null
 
         if (topic.creatorId != userId) {
-            throw IllegalAccessException("토픽 상태 변경 권한이 없습니다.")
+            throw GlobalException(DefaultErrorCode.DEBATE_TOPIC_STATUS_CHANGE_DENIED)
         }
 
         val updated = topic.copy(

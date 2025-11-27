@@ -1,4 +1,3 @@
-version: "3.7"
 services:
   database:
     container_name: junglebook-mysql
@@ -8,7 +7,7 @@ services:
     restart: always
     volumes:
       - ./datadir/mysql:/var/lib/mysql
-      - ./schema/init.sql:/docker-entrypoint-initdb.d/init-script.sql
+      - ./schema/init.sql/init-script.sql:/docker-entrypoint-initdb.d/init-script.sql
     ports:
       - "13306:3306"
     environment:

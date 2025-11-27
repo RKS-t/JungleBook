@@ -31,7 +31,7 @@ data class DebateArgumentListResponse(
 data class DebateArgumentResponse(
     val id: Long?,
     val topicId: Long,
-    val authorId: Long,
+    val userId: Long,
     val authorNickname: String,
     val stance: ArgumentStance,
     val title: String,
@@ -56,7 +56,7 @@ data class DebateArgumentResponse(
             return DebateArgumentResponse(
                 id = entity.id,
                 topicId = entity.topicId,
-                authorId = entity.authorId,
+                userId = entity.userId,
                 authorNickname = entity.authorNickname,
                 stance = entity.stance,
                 title = entity.title,
@@ -143,10 +143,29 @@ data class DebateArgumentCreateRequest(
     val authorNickname: String,
     val fileIds: List<Long>?
 ) {
-    fun toEntity(topicId: Long, authorId: Long): DebateArgumentEntity {
+    companion object {
+        const val MAX_CONTENT_LENGTH = 5000  // 최대 5000자 제한
+        const val MAX_TITLE_LENGTH = 200
+    }
+    
+    init {
+        require(content.length <= MAX_CONTENT_LENGTH) {
+            "논증 내용은 최대 ${MAX_CONTENT_LENGTH}자까지 작성할 수 있습니다. (현재: ${content.length}자)"
+        }
+        require(title.length <= MAX_TITLE_LENGTH) {
+            "제목은 최대 ${MAX_TITLE_LENGTH}자까지 작성할 수 있습니다. (현재: ${title.length}자)"
+        }
+        require(content.isNotBlank()) {
+            "논증 내용을 입력해주세요."
+        }
+        require(title.isNotBlank()) {
+            "제목을 입력해주세요."
+        }
+    }
+    fun toEntity(topicId: Long, userId: Long): DebateArgumentEntity {
         return DebateArgumentEntity(
             topicId = topicId,
-            authorId = authorId,
+            userId = userId,
             stance = stance,
             title = title,
             content = content,
@@ -157,8 +176,4 @@ data class DebateArgumentCreateRequest(
     }
 }
 
-data class DebateArgumentUpdateRequest(
-    val title: String,
-    val content: String,
-    val contentHtml: String?
-)
+// 토론 논증은 수정 불가 (토론의 무결성을 위해)

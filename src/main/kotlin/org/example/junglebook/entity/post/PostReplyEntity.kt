@@ -8,7 +8,13 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "post_reply")
+@Table(name = "post_reply", indexes = [
+    Index(name = "idx_post_created", columnList = "post_id, created_dt"),
+    Index(name = "idx_parent_created", columnList = "pid, created_dt"),
+    Index(name = "idx_user_created", columnList = "user_id, created_dt"),
+    Index(name = "idx_use_yn", columnList = "use_yn"),
+    Index(name = "idx_depth", columnList = "depth")
+])
 @EntityListeners(AuditingEntityListener::class)
 data class PostReplyEntity(
     @Id
@@ -24,8 +30,11 @@ data class PostReplyEntity(
     @Column(name = "pid")
     val pid: Long? = null,
 
-    @Column(name = "user_id")
-    val userId: Long? = null,
+    @Column(name = "user_id", nullable = false)
+    val userId: Long,
+
+    @Column(name = "depth")
+    val depth: Int = 0,
 
     @Column(name = "use_yn")
     var useYn: Boolean = true,
@@ -33,14 +42,14 @@ data class PostReplyEntity(
     @Column(name = "file_yn")
     val fileYn: Boolean = false,
 
-    @Column(name = "nickname", length = 50)
-    val nickname: String? = null,
+    @Column(name = "author_nickname", length = 50)
+    val authorNickname: String,
 
     @Column(name = "content", columnDefinition = "TEXT", nullable = false)
-    val content: String,
+    var content: String,
 
     @Column(name = "content_html", columnDefinition = "TEXT")
-    val contentHtml: String? = null,
+    var contentHtml: String? = null,
 
     @Column(name = "like_cnt")
     var likeCnt: Int = 0,

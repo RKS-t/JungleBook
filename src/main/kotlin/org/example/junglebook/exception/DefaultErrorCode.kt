@@ -1,4 +1,4 @@
-package kr.co.minust.api.exception
+package org.example.junglebook.exception
 
 import org.springframework.http.HttpStatus
 
@@ -42,7 +42,17 @@ enum class DefaultErrorCode(
 
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, HttpStatus.NOT_FOUND.value().toString(), "회원 없음", "회원을 찾을 수 없습니다."),
     UNAUTHORIZED_ACCESS(HttpStatus.UNAUTHORIZED, HttpStatus.UNAUTHORIZED.value().toString(), "인증 실패", "인증이 필요합니다."),
-    INSUFFICIENT_PERMISSION(HttpStatus.FORBIDDEN, HttpStatus.FORBIDDEN.value().toString(), "권한 부족", "해당 작업을 수행할 권한이 없습니다.");
+    INSUFFICIENT_PERMISSION(HttpStatus.FORBIDDEN, HttpStatus.FORBIDDEN.value().toString(), "권한 부족", "해당 작업을 수행할 권한이 없습니다."),
+    
+    // 댓글 관련 에러 코드
+    REPLY_DEPTH_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "댓글 깊이 제한", "댓글 깊이 제한을 초과했습니다."),
+    FORBIDDEN(HttpStatus.FORBIDDEN, HttpStatus.FORBIDDEN.value().toString(), "접근 거부", "해당 작업을 수행할 권한이 없습니다."),
+    
+    // 토론 관련 에러 코드
+    DEBATE_TOPIC_MODIFY_DENIED(HttpStatus.FORBIDDEN, HttpStatus.FORBIDDEN.value().toString(), "토픽 수정 권한 없음", "토픽을 수정할 권한이 없습니다."),
+    DEBATE_TOPIC_DELETE_DENIED(HttpStatus.FORBIDDEN, HttpStatus.FORBIDDEN.value().toString(), "토픽 삭제 권한 없음", "토픽을 삭제할 권한이 없습니다."),
+    DEBATE_TOPIC_STATUS_CHANGE_DENIED(HttpStatus.FORBIDDEN, HttpStatus.FORBIDDEN.value().toString(), "토픽 상태 변경 권한 없음", "토픽 상태를 변경할 권한이 없습니다."),
+    DEBATE_ARGUMENT_DELETE_DENIED(HttpStatus.FORBIDDEN, HttpStatus.FORBIDDEN.value().toString(), "논증 삭제 권한 없음", "논증을 삭제할 권한이 없습니다.");
 
     override fun toString(): String {
         return "$code:$title"

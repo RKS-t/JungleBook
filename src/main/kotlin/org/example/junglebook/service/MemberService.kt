@@ -1,7 +1,7 @@
 package org.example.junglebook.service
 
-import kr.co.minust.api.exception.DefaultErrorCode
-import kr.co.minust.api.exception.GlobalException
+import org.example.junglebook.exception.DefaultErrorCode
+import org.example.junglebook.exception.GlobalException
 import org.example.junglebook.entity.MemberCampHistoryEntity
 import org.example.junglebook.entity.MemberEntity
 import org.example.junglebook.enums.Ideology
@@ -99,9 +99,9 @@ class MemberService(
         }
 
         // 6개월 제한 체크
-        val latestHistory = memberCampHistoryRepository.findLatestByMemberId(userId)
+        val latestHistories = memberCampHistoryRepository.findLatestByMemberId(userId)
         val now = LocalDateTime.now()
-        latestHistory?.let { history ->
+        latestHistories.firstOrNull()?.let { history ->
             if (history.createdAt.isAfter(now.minusMonths(6))) {
                 throw GlobalException(DefaultErrorCode.UNREACHED_TIME_TO_CHANGE_IDEOLOGY)
             }

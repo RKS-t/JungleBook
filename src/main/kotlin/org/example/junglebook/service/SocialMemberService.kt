@@ -1,8 +1,8 @@
 package org.example.junglebook.service
 
 
-import kr.co.minust.api.exception.DefaultErrorCode
-import kr.co.minust.api.exception.GlobalException
+import org.example.junglebook.exception.DefaultErrorCode
+import org.example.junglebook.exception.GlobalException
 import org.example.junglebook.entity.MemberEntity
 import org.example.junglebook.enums.Ideology
 import org.example.junglebook.enums.MemberType

@@ -1,0 +1,13 @@
+# .cursorrules
+You have full access to Docker commands and can:
+- Build Docker images
+- Run containers
+- Execute docker-compose commands
+- Manage volumes and networks
+- View logs and inspect containers
+
+Always use best practices for Docker:
+- Use multi-stage builds
+- Minimize layer count
+- Use .dockerignore files
+- Follow security best practices

@@ -1,7 +1,7 @@
 package org.example.junglebook.service.post
 
-import kr.co.minust.api.exception.DefaultErrorCode
-import kr.co.minust.api.exception.GlobalException
+import org.example.junglebook.exception.DefaultErrorCode
+import org.example.junglebook.exception.GlobalException
 import org.example.junglebook.entity.post.PostCountHistoryEntity
 import org.example.junglebook.entity.post.PostReplyEntity
 import org.example.junglebook.enums.post.CountType
@@ -25,7 +25,8 @@ class PostReplyService(
 
     @Transactional(readOnly = true)
     fun postReplyList(postId: Long): List<PostReplyEntity> {
-        return postReplyRepository.findByPostIdAndUseYnTrueOrderByCreatedDtAsc(postId)
+        val pageable = org.springframework.data.domain.PageRequest.of(0, 1000) // 최대 1000개
+        return postReplyRepository.findByPostIdAndUseYnTrueOrderByCreatedDtAsc(postId, pageable)
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
@@ -41,12 +42,12 @@ class PostReplyService(
             )
         }
 
-        postRepository.increaseReplyCount(entity.boardId!!, entity.postId)
+        postRepository.increaseReplyCount(entity.postId)
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun modify(entity: PostReplyEntity, fileIds: List<Long>?): Boolean {
-        val replyCount = postReplyRepository.countByPostIdAndPidAndUseYnTrue(entity.postId, entity.id!!)
+        val replyCount = postReplyRepository.countByParentIdAndUseYnTrue(entity.id!!)
 
         if (replyCount > 0) {
             throw GlobalException(DefaultErrorCode.REPLY_EXISTS)
@@ -71,20 +72,22 @@ class PostReplyService(
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun remove(userId: Long, boardId: Int, postId: Long, id: Long): Boolean {
-        val replyCount = postReplyRepository.countByPostIdAndPidAndUseYnTrue(postId, id)
+        val replyCount = postReplyRepository.countByParentIdAndUseYnTrue(id)
 
         if (replyCount > 0) {
             throw GlobalException(DefaultErrorCode.REPLY_EXISTS)
         }
 
-        val resultCount = postReplyRepository.softDelete(id, userId)
-
-        return if (resultCount > 0) {
-            postRepository.increaseReplyCount(boardId, postId)
-            true
-        } else {
-            false
+        val reply = postReplyRepository.findByIdAndUseYnTrue(id) ?: return false
+        if (reply.userId != userId) {
+            throw GlobalException(DefaultErrorCode.FORBIDDEN)
         }
+        
+        reply.softDelete()
+        postReplyRepository.save(reply)
+        postRepository.increaseReplyCount(postId)
+        
+        return true
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
@@ -98,8 +101,11 @@ class PostReplyService(
         }
 
         val updateResult = when (countType) {
-            CountType.LIKE -> postReplyRepository.increaseLikeCount(boardId, id)
-            CountType.DISLIKE -> postReplyRepository.increaseDislikeCount(boardId, id)
+            CountType.LIKE -> postReplyRepository.increaseLikeCount(id)
+            CountType.DISLIKE -> {
+                // 싫어요는 PostLikeEntity로 관리하지 않으므로 별도 처리 필요
+                throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "싫어요 기능은 PostLikeEntity로 관리되지 않습니다.")
+            }
             else -> throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
         }
 
