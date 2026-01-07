@@ -103,6 +103,25 @@ docker-compose ps
 **MySQL 접속 정보:**
 - Database: `junglebook`
 - Username: `junglebook`
+
+## 📊 API 다이어그램 안내
+
+- 최신 Mermaid 차트는 `doc/` 하위에 정리되어 있습니다.
+- 주요 엔드포인트별 차트 링크는 `doc/README.md`에서 확인하세요.
+- 생성된 차트 종류:
+  - Class Diagram
+  - Sequence Diagram (JWT 필터 체인 및 GlobalExceptionHandler 반영)
+  - Flowchart (실제 비즈니스 흐름과 예외 처리 반영)
+  - Redis Type Map (미사용 시 “No Redis usage” 표기)
+  - Database ERD (해당 API 관련 테이블만 축약 표시)
+
+### 바로가기
+- 전체 목차: `doc/README.md`
+- 예시:
+  - 게시글 생성: `doc/post/PostController/createPost-flowchart.md`
+  - 회원 가입+로그인: `doc/MemberController/signupAndLogin-flowchart.md`
+  - 토론 토픽 생성: `doc/debate/DebateTopicController/createTopic-flowchart.md`
+  - 토론 논증 생성: `doc/debate/DebateArgumentController/createArgument-flowchart.md`
 - Password: `junglebook123!@#`
 - Root Password: `root`
 
