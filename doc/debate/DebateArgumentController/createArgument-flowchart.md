@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart TD
-    Start([Client Request: POST /api/debate/topics/{topicId}/arguments]) --> AuthCheck{Authentication<br/>Required?}
+    Start([Client Request: POST /api/debate/topics/:topicId/arguments]) --> AuthCheck{Authentication<br/>Required?}
     AuthCheck -->|Yes| JWTValidate[JWT Token Validation<br/><i>JwtAuthenticationFilter</i>]
     AuthCheck -->|No| GlobalExceptionHandler1[GlobalExceptionHandler<br/>Return 401]
     

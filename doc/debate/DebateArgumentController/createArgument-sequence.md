@@ -12,7 +12,7 @@ sequenceDiagram
     participant FallacyDetectionService
     participant GlobalExceptionHandler
     
-    Client->>SecurityFilterChain: POST /api/debate/topics/{topicId}/arguments
+    Client->>SecurityFilterChain: POST /api/debate/topics/:topicId/arguments
     SecurityFilterChain->>JwtAuthenticationFilter: Filter request
     JwtAuthenticationFilter->>JwtAuthenticationFilter: Extract JWT token
     JwtAuthenticationFilter->>JwtAuthenticationFilter: Validate token
