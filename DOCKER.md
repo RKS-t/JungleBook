@@ -2,6 +2,23 @@
 
 JungleBook 프로젝트의 Docker 사용법을 안내합니다.
 
+## 📋 서비스 정보
+
+| 서비스 | 포트 | 컨테이너 이름 | 설명 |
+|--------|------|--------------|------|
+| MySQL | 13306 | junglebook-mysql | 데이터베이스 |
+| Redis | 16379 | junglebook-redis | 캐시/세션 저장소 |
+
+**연결 정보:**
+- MySQL: `localhost:13306`
+- Redis: `localhost:16379`
+
+**MySQL 접속 정보:**
+- Database: `junglebook`
+- Username: `junglebook`
+- Password: `junglebook123!@#`
+- Root Password: `root`
+
 ## 📋 목차
 - [빠른 시작](#빠른-시작)
 - [Makefile 명령어](#makefile-명령어)
