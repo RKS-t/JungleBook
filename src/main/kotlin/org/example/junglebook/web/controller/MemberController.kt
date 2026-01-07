@@ -2,12 +2,9 @@ package org.example.junglebook.web.controller
 
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
-import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.Parameter
 import jakarta.servlet.http.HttpServletResponse
 import org.example.junglebook.exception.DefaultErrorCode
 import org.example.junglebook.exception.GlobalException
-import lombok.RequiredArgsConstructor
 import org.example.junglebook.constant.JBConstants
 import org.example.junglebook.enums.MemberType
 import org.example.junglebook.enums.SocialProvider
@@ -47,7 +44,6 @@ import java.time.LocalDateTime
 
 @Api(tags = ["회원"])
 @Validated
-@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api")
 class MemberController(
@@ -75,42 +71,9 @@ class MemberController(
     @ApiOperation("소셜 로그인")
     @PostMapping("/social-login")
     fun socialLogin(@RequestBody request: SocialLoginRequest, response: HttpServletResponse): ResponseEntity<SocialLoginTokenDto> {
-        // 소셜 제공자에서 사용자 정보 조회
         val socialUserInfo = getSocialUserInfo(request.provider, request.accessToken)
-
-        // 기존 소셜 회원 확인
-        var member = socialMemberService.findBySocialLogin(request.provider, socialUserInfo.id)
-
-        member = if (member != null) {
-            // 기존 회원 정보 업데이트
-            socialMemberService.updateSocialMember(
-                member = member,
-                name = socialUserInfo.name,
-                email = socialUserInfo.email,
-                profileImage = socialUserInfo.profileImage
-            )
-        } else {
-            // 신규 소셜 회원 생성 또는 기존 일반 회원과 연동
-            socialMemberService.createOrLinkSocialMember(
-                name = socialUserInfo.name,
-                email = socialUserInfo.email,
-                profileImage = socialUserInfo.profileImage,
-                provider = request.provider,
-                providerId = socialUserInfo.id
-            )
-        }
-
-        val memberAuth = Member.from(member)
-        val tokenDto = makeToken(memberAuth, response)
-        val loginResponse = LoginResponse.success(member)
-
-        return ResponseEntity.ok(SocialLoginTokenDto(
-            memberId = tokenDto.memberId!!,
-            nickname = tokenDto.nickname!!,
-            accessToken = tokenDto.accessToken,
-            refreshToken = tokenDto.refreshToken!!,
-            loginResponse = loginResponse
-        ))
+        val member = processSocialLogin(request.provider, socialUserInfo)
+        return ResponseEntity.ok(createSocialLoginResponse(member, response))
     }
 
     @ApiOperation("리프레시 토큰으로 로그인")
@@ -127,22 +90,7 @@ class MemberController(
     @ApiOperation("일반 회원가입")
     @PostMapping("/signup")
     fun signUp(@RequestBody request: SignUpRequest): ResponseEntity<Void> {
-        // 중복 체크
-        if (memberService.findByEmail(request.email) != null) {
-            throw GlobalException(DefaultErrorCode.EMAIL_ALREADY_EXIST)
-        }
-
-        if (memberService.findByNickname(request.nickname) != null) {
-            throw GlobalException(DefaultErrorCode.NICKNAME_ALREADY_EXIST)
-        }
-
-        if (memberService.myInfoByLoginId(request.loginId) != null) {
-            throw GlobalException(DefaultErrorCode.LOGIN_ID_ALREADY_EXIST)
-        }
-
-        // 비밀번호 인코딩
         request.encodedPassword = passwordEncoder.encode(request.password)
-
         memberService.signUp(request)
         return ResponseEntity.status(HttpStatus.CREATED).build()
     }
@@ -150,26 +98,9 @@ class MemberController(
     @ApiOperation("일반 회원가입 후 자동 로그인")
     @PostMapping("/signup-and-login")
     fun signUpAndLogin(@RequestBody request: SignUpRequest, response: HttpServletResponse): ResponseEntity<TokenDto> {
-        // 중복 체크
-        if (memberService.findByEmail(request.email) != null) {
-            throw GlobalException(DefaultErrorCode.EMAIL_ALREADY_EXIST)
-        }
-
-        if (memberService.findByNickname(request.nickname) != null) {
-            throw GlobalException(DefaultErrorCode.NICKNAME_ALREADY_EXIST)
-        }
-
-        if (memberService.myInfoByLoginId(request.loginId) != null) {
-            throw GlobalException(DefaultErrorCode.LOGIN_ID_ALREADY_EXIST)
-        }
-
-        // 비밀번호 인코딩
         request.encodedPassword = passwordEncoder.encode(request.password)
-
-        // 회원가입 처리
         memberService.signUp(request)
 
-        // 자동 로그인 처리
         val authentication = authenticationManager.authenticate(
             UsernamePasswordAuthenticationToken(request.loginId, request.password)
         )
@@ -183,10 +114,7 @@ class MemberController(
     @ApiOperation("소셜 회원가입")
     @PostMapping("/social-signup")
     fun socialSignUp(@RequestBody request: SocialSignUpRequest, response: HttpServletResponse): ResponseEntity<SocialLoginTokenDto> {
-        // 소셜 제공자에서 사용자 정보 조회
         val socialUserInfo = getSocialUserInfo(request.provider, request.accessToken)
-
-        // 신규 소셜 회원 생성 (중복 체크 포함)
         val member = socialMemberService.createOrLinkSocialMember(
             name = socialUserInfo.name,
             email = socialUserInfo.email,
@@ -194,24 +122,13 @@ class MemberController(
             provider = request.provider,
             providerId = socialUserInfo.id
         )
-
-        val memberAuth = Member.from(member)
-        val tokenDto = makeToken(memberAuth, response)
-        val loginResponse = LoginResponse.success(member)
-
-        return ResponseEntity.ok(SocialLoginTokenDto(
-            memberId = tokenDto.memberId!!,
-            nickname = tokenDto.nickname!!,
-            accessToken = tokenDto.accessToken,
-            refreshToken = tokenDto.refreshToken!!,
-            loginResponse = loginResponse
-        ))
+        return ResponseEntity.ok(createSocialLoginResponse(member, response))
     }
 
     @ApiOperation("로그인 ID 중복 체크")
     @GetMapping("/check/login-id")
     fun checkLoginId(@RequestParam loginId: String): ResponseEntity<DuplicateCheckResponse> {
-        val isDuplicate = memberService.myInfoByLoginId(loginId) != null
+        val isDuplicate = memberService.existsByLoginId(loginId)
         return ResponseEntity.ok(
             DuplicateCheckResponse(
                 field = "loginId",
@@ -253,7 +170,7 @@ class MemberController(
     @ApiOperation("내 정보 조회")
     @GetMapping("/member-info")
     fun memberInfo(@AuthenticationPrincipal member: Member) =
-        ResponseEntity.ok(memberService.myInfoByLoginId(member.loginId))
+        ResponseEntity.ok(memberService.findActivateMemberByLoginId(member.loginId))
 
     @ApiOperation("비밀번호 변경")
     @PatchMapping("/password")
@@ -267,7 +184,6 @@ class MemberController(
 
         val memberEntity = memberService.findActivateMemberByLoginId(member.loginId)
 
-        // 소셜 회원은 비밀번호 변경 불가
         if (memberEntity.memberType == MemberType.SOCIAL) {
             throw GlobalException(DefaultErrorCode.SOCIAL_MEMBER_PASSWORD_CHANGE_DENIED)
         }
@@ -292,21 +208,58 @@ class MemberController(
         return ResponseEntity.ok().build()
     }
 
-    // ===== Private Helper Methods =====
-
-    private fun makeToken(member: Member, response: HttpServletResponse): TokenDto {
+    private fun makeToken(member: Member, response: HttpServletResponse, includeRefreshToken: Boolean = true): TokenDto {
         val accessToken = jwtService.generateToken(member, true)
-        val refreshToken = jwtService.generateToken(member.setExpired(jwtTokenProperties.refreshToken), false)
         response.setHeader(HttpHeaders.AUTHORIZATION, JBConstants.BEARER + accessToken)
 
+        if (!includeRefreshToken) {
+            return TokenDto(accessToken = accessToken)
+        }
+
+        val refreshToken = jwtService.generateToken(member.setExpired(jwtTokenProperties.refreshToken), false)
         val info = memberService.findActivateMemberByLoginId(member.loginId)
-        return TokenDto(info.id!!, info.nickname, accessToken, refreshToken)
+        val memberId = requireNotNull(info.id) { "Member ID must not be null" }
+        return TokenDto(memberId, info.nickname, accessToken, refreshToken)
     }
 
     private fun makeTokenWithoutRefreshToken(member: Member, response: HttpServletResponse): TokenDto {
-        val accessToken = jwtService.generateToken(member, true)
-        response.setHeader(HttpHeaders.AUTHORIZATION, JBConstants.BEARER + accessToken)
-        return TokenDto(accessToken = accessToken)
+        return makeToken(member, response, includeRefreshToken = false)
+    }
+
+    private fun processSocialLogin(provider: SocialProvider, socialUserInfo: SocialUserInfo): org.example.junglebook.entity.MemberEntity {
+        return socialMemberService.findBySocialLogin(provider, socialUserInfo.id)
+            ?.let { existingMember ->
+                socialMemberService.updateSocialMember(
+                    member = existingMember,
+                    name = socialUserInfo.name,
+                    email = socialUserInfo.email,
+                    profileImage = socialUserInfo.profileImage
+                )
+            } ?: socialMemberService.createOrLinkSocialMember(
+                name = socialUserInfo.name,
+                email = socialUserInfo.email,
+                profileImage = socialUserInfo.profileImage,
+                provider = provider,
+                providerId = socialUserInfo.id
+            )
+    }
+
+    private fun createSocialLoginResponse(member: org.example.junglebook.entity.MemberEntity, response: HttpServletResponse): SocialLoginTokenDto {
+        val memberAuth = Member.from(member)
+        val tokenDto = makeToken(memberAuth, response)
+        val loginResponse = LoginResponse.success(member)
+
+        val memberId = requireNotNull(tokenDto.memberId) { "Member ID must not be null" }
+        val nickname = requireNotNull(tokenDto.nickname) { "Nickname must not be null" }
+        val refreshToken = requireNotNull(tokenDto.refreshToken) { "Refresh token must not be null" }
+
+        return SocialLoginTokenDto(
+            memberId = memberId,
+            nickname = nickname,
+            accessToken = tokenDto.accessToken,
+            refreshToken = refreshToken,
+            loginResponse = loginResponse
+        )
     }
 
     private fun getSocialUserInfo(provider: SocialProvider, accessToken: String): SocialUserInfo {
@@ -317,8 +270,6 @@ class MemberController(
     }
 
     private fun getKakaoUserInfo(accessToken: String): SocialUserInfo {
-        // TODO: 카카오 API 호출 로직 구현
-        // 실제 구현 시 RestTemplate 또는 WebClient 사용
         return SocialUserInfo(
             id = "kakao_${System.currentTimeMillis()}",
             name = "카카오사용자",
@@ -329,8 +280,6 @@ class MemberController(
     }
 
     private fun getNaverUserInfo(accessToken: String): SocialUserInfo {
-        // TODO: 네이버 API 호출 로직 구현
-        // 실제 구현 시 RestTemplate 또는 WebClient 사용
         return SocialUserInfo(
             id = "naver_${System.currentTimeMillis()}",
             name = "네이버사용자",

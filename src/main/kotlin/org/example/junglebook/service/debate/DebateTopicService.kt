@@ -1,5 +1,6 @@
 package org.example.junglebook.service.debate
 
+import org.example.junglebook.constant.JBConstants
 import org.example.junglebook.exception.DefaultErrorCode
 import org.example.junglebook.exception.GlobalException
 import org.example.junglebook.enums.ArgumentStance
@@ -7,6 +8,7 @@ import org.example.junglebook.enums.DebateTopicCategory
 import org.example.junglebook.enums.DebateTopicStatus
 import org.example.junglebook.repository.debate.DebateArgumentRepository
 import org.example.junglebook.repository.debate.DebateTopicRepository
+import org.example.junglebook.util.logger
 import org.example.junglebook.web.dto.DebateArgumentSimpleResponse
 import org.example.junglebook.web.dto.DebateTopicCreateRequest
 import org.example.junglebook.web.dto.DebateTopicDashboardResponse
@@ -33,9 +35,6 @@ class DebateTopicService(
     private val debateArgumentRepository: DebateArgumentRepository,
 ) {
 
-    /**
-     * 1. 토픽 생성
-     */
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun createTopic(request: DebateTopicCreateRequest, creatorId: Long): DebateTopicResponse {
         val entity = request.toEntity(creatorId)
@@ -43,36 +42,28 @@ class DebateTopicService(
         return DebateTopicResponse.of(saved)
     }
 
-    /**
-     * 2. 토픽 상세 조회
-     */
     @Transactional(readOnly = true)
     fun getTopicDetail(topicId: Long, increaseView: Boolean = true): DebateTopicDetailResponse? {
         val topic = debateTopicRepository.findByIdAndActiveYnTrue(topicId) ?: return null
 
-        // 조회수 증가 (비동기나 별도 처리 권장)
         if (increaseView) {
             debateTopicRepository.increaseViewCount(topicId)
         }
 
-        // 입장별 통계
         val stanceDistribution = debateArgumentRepository.countByTopicIdGroupByStance(topicId)
             .associate { (it[0] as ArgumentStance) to (it[1] as Long).toInt() }
 
-        // 최근 7일간 논증 수
-        val weekAgo = LocalDateTime.now().minusDays(7)
+        val weekAgo = LocalDateTime.now().minusDays(JBConstants.DEBATE_RECENT_WEEKS.toLong())
         val recentCount = debateArgumentRepository.countByTopicIdAndActiveYnTrueAndCreatedAtBetween(
             topicId, weekAgo, LocalDateTime.now()
         ).toInt()
 
-        // 일평균 논증 수
         val daysSinceCreation = ChronoUnit.DAYS.between(topic.createdAt.toLocalDate(), LocalDate.now()) + 1
         val avgPerDay = if (daysSinceCreation > 0) topic.argumentCount.toDouble() / daysSinceCreation else 0.0
 
-        // 입장별 인기 논증 (각 입장당 상위 3개)
         val topArguments = ArgumentStance.values().associateWith { stance ->
             val arguments = debateArgumentRepository.findPopularByStance(topicId, stance)
-            DebateArgumentSimpleResponse.of(arguments.take(3))
+            DebateArgumentSimpleResponse.of(arguments.take(JBConstants.DEBATE_TOP_ARGUMENTS_LIMIT))
         }
 
         val statistics = TopicStatistics(
@@ -90,9 +81,6 @@ class DebateTopicService(
         )
     }
 
-    /**
-     * 3. 토픽 목록 조회 (정렬 기준별)
-     */
     @Transactional(readOnly = true)
     fun getTopicList(sortType: TopicSortType, pageNo: Int, limit: Int): DebateTopicListResponse {
         val pageable = PageRequest.of(pageNo, limit)
@@ -118,19 +106,13 @@ class DebateTopicService(
         )
     }
 
-    /**
-     * 4. Hot 토픽 조회
-     */
     @Transactional(readOnly = true)
-    fun getHotTopics(limit: Int = 10): List<DebateTopicSimpleResponse> {
+    fun getHotTopics(limit: Int = JBConstants.DEBATE_DEFAULT_HOT_TOPICS_LIMIT): List<DebateTopicSimpleResponse> {
         val pageable = PageRequest.of(0, limit)
         val topics = debateTopicRepository.findByHotYnTrueAndActiveYnTrueOrderByViewCountDesc(pageable)
         return DebateTopicSimpleResponse.of(topics.content)
     }
 
-    /**
-     * 5. 카테고리별 토픽 조회
-     */
     @Transactional(readOnly = true)
     fun getTopicsByCategory(
         category: DebateTopicCategory,
@@ -148,9 +130,6 @@ class DebateTopicService(
         )
     }
 
-    /**
-     * 6. 토픽 검색
-     */
     @Transactional(readOnly = true)
     fun searchTopics(request: DebateTopicSearchRequest): DebateTopicListResponse {
         val pageable = PageRequest.of(request.pageNo, request.limit)
@@ -159,11 +138,8 @@ class DebateTopicService(
             request.category == null &&
             request.status == null &&
             !request.hotOnly) {
-            // 필터 없으면 정렬만 적용
-            getTopicList(request.sortType, request.pageNo, request.limit)
             return getTopicList(request.sortType, request.pageNo, request.limit)
         } else {
-            // 복합 필터 적용
             debateTopicRepository.searchWithFilters(
                 request.category,
                 request.status,
@@ -181,9 +157,6 @@ class DebateTopicService(
         )
     }
 
-    /**
-     * 7. 진행 중인 토픽
-     */
     @Transactional(readOnly = true)
     fun getOngoingTopics(pageNo: Int, limit: Int): DebateTopicListResponse {
         val pageable = PageRequest.of(pageNo, limit)
@@ -197,30 +170,23 @@ class DebateTopicService(
         )
     }
 
-    /**
-     * 8. 마감 임박 토픽
-     */
     @Transactional(readOnly = true)
-    fun getEndingSoonTopics(limit: Int = 10): List<DebateTopicSimpleResponse> {
+    fun getEndingSoonTopics(limit: Int = JBConstants.DEBATE_DEFAULT_ENDING_SOON_LIMIT): List<DebateTopicSimpleResponse> {
         val pageable = PageRequest.of(0, limit)
         val topics = debateTopicRepository.findEndingSoonTopics(LocalDate.now(), pageable)
         return DebateTopicSimpleResponse.of(topics.content)
     }
 
 
-    /**
-     * 12. 토픽 수정
-     */
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun updateTopic(topicId: Long, request: DebateTopicUpdateRequest, userId: Long): DebateTopicResponse? {
         val topic = debateTopicRepository.findByIdAndActiveYnTrue(topicId) ?: return null
 
-        // 권한 검증 (작성자만 수정 가능)
         if (topic.creatorId != userId) {
+            logger().warn("Unauthorized topic update attempt: topicId: {}, userId: {}, topicCreatorId: {}", topicId, userId, topic.creatorId)
             throw GlobalException(DefaultErrorCode.DEBATE_TOPIC_MODIFY_DENIED)
         }
 
-        // 업데이트
         val updated = topic.copy(
             title = request.title ?: topic.title,
             description = request.description ?: topic.description,
@@ -237,31 +203,25 @@ class DebateTopicService(
         return DebateTopicResponse.of(saved)
     }
 
-    /**
-     * 13. 토픽 삭제 (Soft Delete)
-     */
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
-    fun deleteTopic(topicId: Long, userId: Long): Boolean {
-        val topic = debateTopicRepository.findByIdAndActiveYnTrue(topicId) ?: return false
+    fun deleteTopic(topicId: Long, userId: Long) {
+        val topic = debateTopicRepository.findByIdAndActiveYnTrue(topicId)
+            ?: throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "토픽을 찾을 수 없습니다.")
 
-        // 권한 검증
         if (topic.creatorId != userId) {
+            logger().warn("Unauthorized topic delete attempt: topicId: {}, userId: {}, topicCreatorId: {}", topicId, userId, topic.creatorId)
             throw GlobalException(DefaultErrorCode.DEBATE_TOPIC_DELETE_DENIED)
         }
 
         val deleted = topic.copy(activeYn = false, updatedAt = LocalDateTime.now())
         debateTopicRepository.save(deleted)
-        return true
     }
 
-    /**
-     * 14. 대시보드 데이터
-     */
     @Transactional(readOnly = true)
     fun getDashboard(): DebateTopicDashboardResponse {
-        val hotTopics = getHotTopics(5)
-        val newTopics = getTopicList(TopicSortType.LATEST, 0, 5).topics
-        val endingSoonTopics = getEndingSoonTopics(5)
+        val hotTopics = getHotTopics(JBConstants.DEBATE_DASHBOARD_TOPICS_LIMIT)
+        val newTopics = getTopicList(TopicSortType.LATEST, 0, JBConstants.DEBATE_DASHBOARD_TOPICS_LIMIT).topics
+        val endingSoonTopics = getEndingSoonTopics(JBConstants.DEBATE_DASHBOARD_TOPICS_LIMIT)
 
         val categoryDistribution = debateTopicRepository.countByCategory()
             .associate {
@@ -276,32 +236,30 @@ class DebateTopicService(
         )
     }
 
-    /**
-     * 15. Hot 토픽 자동 설정 (배치나 스케줄러에서 호출)
-     */
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
-    fun updateHotTopics(threshold: Int = 100) {
-        // 모든 활성 토픽 조회
+    fun updateHotTopics(threshold: Int = JBConstants.DEBATE_HOT_TOPIC_THRESHOLD) {
         val allTopics = debateTopicRepository.findAll()
             .filter { it.activeYn }
 
-        allTopics.forEach { topic ->
-            val score = topic.argumentCount + (topic.viewCount / 10) // 점수 계산
+        val topicsToUpdate = allTopics.mapNotNull { topic ->
+            val score = topic.argumentCount + (topic.viewCount / JBConstants.DEBATE_HOT_TOPIC_VIEW_COUNT_DIVISOR)
             val shouldBeHot = score >= threshold
 
             if (topic.hotYn != shouldBeHot) {
-                val updated = topic.copy(
+                topic.copy(
                     hotYn = shouldBeHot,
                     updatedAt = LocalDateTime.now()
                 )
-                debateTopicRepository.save(updated)
+            } else {
+                null
             }
+        }
+
+        if (topicsToUpdate.isNotEmpty()) {
+            debateTopicRepository.saveAll(topicsToUpdate)
         }
     }
 
-    /**
-     * 16. 토픽 통계 조회
-     */
     @Transactional(readOnly = true)
     fun getTopicStatistics(topicId: Long): TopicStatistics? {
         val topic = debateTopicRepository.findByIdAndActiveYnTrue(topicId) ?: return null
@@ -309,7 +267,7 @@ class DebateTopicService(
         val stanceDistribution = debateArgumentRepository.countByTopicIdGroupByStance(topicId)
             .associate { (it[0] as ArgumentStance) to (it[1] as Long).toInt() }
 
-        val weekAgo = LocalDateTime.now().minusDays(7)
+        val weekAgo = LocalDateTime.now().minusDays(JBConstants.DEBATE_RECENT_WEEKS.toLong())
         val recentCount = debateArgumentRepository.countByTopicIdAndActiveYnTrueAndCreatedAtBetween(
             topicId, weekAgo, LocalDateTime.now()
         ).toInt()
@@ -326,14 +284,12 @@ class DebateTopicService(
         )
     }
 
-    /**
-     * 17. 토픽 상태 변경
-     */
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun changeTopicStatus(topicId: Long, status: DebateTopicStatus, userId: Long): DebateTopicResponse? {
         val topic = debateTopicRepository.findByIdAndActiveYnTrue(topicId) ?: return null
 
         if (topic.creatorId != userId) {
+            logger().warn("Unauthorized topic status change attempt: topicId: {}, userId: {}, topicCreatorId: {}", topicId, userId, topic.creatorId)
             throw GlobalException(DefaultErrorCode.DEBATE_TOPIC_STATUS_CHANGE_DENIED)
         }
 
@@ -346,17 +302,11 @@ class DebateTopicService(
         return DebateTopicResponse.of(saved)
     }
 
-    /**
-     * 18. 논증 생성 시 토픽 카운트 증가
-     */
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun increaseArgumentCount(topicId: Long) {
         debateTopicRepository.increaseArgumentCount(topicId)
     }
 
-    /**
-     * 19. 논증 삭제 시 토픽 카운트 감소
-     */
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun decreaseArgumentCount(topicId: Long) {
         debateTopicRepository.decreaseArgumentCount(topicId)

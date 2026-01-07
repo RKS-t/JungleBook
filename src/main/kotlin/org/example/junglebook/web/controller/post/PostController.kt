@@ -2,11 +2,13 @@ package org.example.junglebook.web.controller.post
 
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.example.junglebook.entity.post.BoardEntity
+import org.example.junglebook.enums.post.CountType
 import org.example.junglebook.model.Member
+import org.example.junglebook.repository.post.BoardRepository
 import org.example.junglebook.service.MemberService
 import org.example.junglebook.service.post.PostService
 import org.example.junglebook.web.dto.*
-import org.springframework.data.domain.PageRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -19,7 +21,8 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/posts")
 class PostController(
     private val postService: PostService,
-    private val memberService: MemberService
+    private val memberService: MemberService,
+    private val boardRepository: BoardRepository
 ) {
 
     @Operation(summary = "게시글 생성")
@@ -99,12 +102,8 @@ class PostController(
         @PathVariable postId: Long
     ): ResponseEntity<Void> {
         val memberId = getMemberId(member)
-        val deleted = postService.deletePost(postId, memberId)
-        return if (deleted) {
-            ResponseEntity.noContent().build()
-        } else {
-            ResponseEntity.notFound().build()
-        }
+        postService.deletePost(postId, memberId)
+        return ResponseEntity.noContent().build()
     }
 
     @Operation(summary = "조회수 증가")
@@ -116,11 +115,26 @@ class PostController(
         return ResponseEntity.ok().build()
     }
 
+    @Operation(summary = "좋아요 증가")
+    @PostMapping("/{postId}/like")
+    fun increaseLike(
+        @AuthenticationPrincipal member: Member,
+        @PathVariable postId: Long,
+        @RequestParam boardId: Int
+    ): ResponseEntity<CountResponse> {
+        val memberId = getMemberId(member)
+        val board = requireNotNull(boardRepository.findById(boardId).orElse(null)) {
+            "Board not found: $boardId"
+        }
+        val count = postService.increaseCount(board, postId, memberId, CountType.LIKE)
+        return ResponseEntity.ok(CountResponse(count))
+    }
+
     private fun getMemberId(member: Member): Long {
         val memberEntity = memberService.findActivateMemberByLoginId(member.loginId)
-        return memberEntity.id ?: throw org.example.junglebook.exception.GlobalException(
-            org.example.junglebook.exception.DefaultErrorCode.USER_NOT_FOUND
-        )
+        return requireNotNull(memberEntity.id) {
+            "Member ID must not be null"
+        }
     }
 }
 

@@ -172,7 +172,6 @@ class JwtAuthenticationFilter(
         }
     }
 
-    // 현재는 기본 권한만 부여, 향후 RBAC 구현 시 확장 가능
     private fun getAuthoritiesForUser(loginId: String): List<GrantedAuthority> {
         return try {
             val authorities = mutableListOf<GrantedAuthority>()

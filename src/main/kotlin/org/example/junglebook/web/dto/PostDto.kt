@@ -130,7 +130,7 @@ data class PostResponse(
             return PostResponse(
                 id = entity.id!!,
                 boardId = entity.boardId,
-                userId = entity.userId,
+                userId = entity.userId ?: 0L,
                 authorNickname = entity.authorNickname,
                 title = entity.title,
                 content = entity.content,

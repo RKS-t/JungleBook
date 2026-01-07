@@ -11,3 +11,12 @@ Always use best practices for Docker:
 - Minimize layer count
 - Use .dockerignore files
 - Follow security best practices
+
+## Project Instructions (자동 적용)
+**중요**: 모든 작업 시작 전에 아래 instruction 파일들을 반드시 참조하세요.
+
+- **코드 개발/수정 시**: `.cursor/instruction/cursor-instructions-dev.md` 파일을 먼저 읽고 지침을 따르세요.
+- **코드 리뷰 시**: `.cursor/instruction/cursor-instructions-review.md` 파일을 먼저 읽고 지침을 따르세요.
+- **테스트 작성 시**: `.cursor/instruction/cursor-instructions-test.md` 파일을 참조하세요.
+
+이 instruction 파일들은 작업 유형에 따라 자동으로 적용되어야 하므로, 작업 시작 전에 항상 해당 파일을 읽고 준수하세요.

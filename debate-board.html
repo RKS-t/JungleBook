@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>토론 게시판</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #fff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --sub: #475569;
+      --primary: #2563eb;
+      --divider: #cbd5e1;
+      --chip-blue-bg: #e0f2fe;
+      --chip-blue-bd: #bfdbfe;
+      --chip-green-bg: #e9f7e9;
+      --chip-green-bd: #3cae4c;
+      --chip-pink-bg: #f8eaf0;
+      --chip-pink-bd: #bc6371;
+      --chip-brown-bg: #f7f3f1;
+      --chip-brown-bd: #cfc0a5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Pretendard", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(140deg, #0f172a, #1e293b);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 32px 20px 60px;
+      display: flex;
+      justify-content: center;
+    }
+    .page {
+      width: min(1200px, 100%);
+      background: var(--bg);
+      border: 1px solid #e5eaf0;
+      border-radius: 16px;
+      box-shadow: 0 20px 48px rgba(15, 23, 42, 0.14);
+      padding: 32px;
+    }
+    .header h1 { margin: 0 0 8px; font-size: 28px; font-weight: 700; }
+    .header p { margin: 0 0 24px; font-size: 15px; color: var(--sub); }
+    .search {
+      display: flex; align-items: center; gap: 12px;
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 12px; padding: 0 16px; height: 56px;
+    }
+    .search input {
+      flex: 1; border: none; outline: none;
+      font-size: 15px; background: transparent; color: var(--text);
+    }
+    .filters { display: grid; gap: 10px; margin: 16px 0 20px; }
+    .filters-row { 
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 8px; 
+      align-items: center;
+    }
+    .label { 
+      font-size: 13px; 
+      font-weight: 700; 
+      color: #243447; 
+      display: flex;
+      align-items: center;
+      height: 32px;
+    }
+    .chip {
+      padding: 1px 12px 0 12px; 
+      border-radius: 16px; 
+      border: 1px solid var(--border);
+      background: #fff; 
+      font-size: 13px; 
+      color: var(--sub); 
+      cursor: pointer;
+      transition: background 0.16s ease, color 0.16s ease, border 0.16s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 32px;
+      min-width: fit-content;
+      line-height: 1;
+      font-weight: 600;
+    }
+    .chip.primary { border-color: var(--primary); color: var(--primary); background: #e8f0ff; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 18px 16px;
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .card h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--text); }
+    .card p { margin: 0; font-size: 13px; color: var(--sub); line-height: 1.5; }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+    .badge { 
+      height: 26px; 
+      padding: 0 12px; 
+      border-radius: 13px; 
+      display: inline-flex; 
+      align-items: center; 
+      justify-content: center;
+      font-size: 12px; 
+      font-weight: 700; 
+      border: 1px solid transparent;
+      line-height: 1;
+    }
+    .cat-science { background: var(--chip-blue-bg); border-color: var(--chip-blue-bd); color: #2563eb; }
+    .cat-economy { background: #f4f9e6; border-color: #abc96e; color: #5f8b1d; }
+    .cat-society { background: var(--chip-brown-bg); border-color: var(--chip-brown-bd); color: #855f48; }
+    .status-active { background: var(--chip-green-bg); border-color: var(--chip-green-bd); color: #2f8f3a; }
+    .status-ending { background: var(--chip-pink-bg); border-color: var(--chip-pink-bd); color: #aa304e; }
+    .meta { font-size: 12px; color: #526070; margin-top: 4px; }
+    @media (max-width: 768px) {
+      .page { padding: 24px 18px; }
+      .header h1 { font-size: 24px; }
+      .search { height: 52px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <h1>토론 게시판</h1>
+      <p>토픽을 검색하고 참여할 토론을 선택하세요</p>
+    </header>
+
+    <div class="search">
+      <input type="text" placeholder="토픽을 검색하세요 (제목/설명)" />
+    </div>
+
+    <div class="filters">
+      <div class="filters-row">
+        <span class="label">정렬:</span>
+        <button class="chip primary">최신순</button>
+        <button class="chip">인기순</button>
+        <button class="chip">조회순</button>
+        <button class="chip">논증많은순</button>
+        <button class="chip">마감임박</button>
+      </div>
+      <div class="filters-row">
+        <span class="label">카테고리:</span>
+        <button class="chip primary">전체</button>
+        <button class="chip">사회</button>
+        <button class="chip">정치</button>
+        <button class="chip">경제</button>
+        <button class="chip">과학</button>
+        <button class="chip">문화</button>
+      </div>
+    </div>
+
+    <section class="grid">
+      <article class="card">
+        <h3>[Hot] AI 규제, 혁신을 막는가 보호하는가</h3>
+        <p>생성형 AI 규제안이 산업 혁신을 억누를지, 안전을 위해 필수인지 토론합니다.</p>
+        <div class="chips">
+          <span class="badge cat-science">과학</span>
+          <span class="badge status-active">진행중</span>
+        </div>
+        <div class="meta">논증 128 • 조회 5.4k • 마감 2025-02-10</div>
+      </article>
+
+      <article class="card">
+        <h3>[진행중] 탄소세 확대, 경제에 득인가 실인가</h3>
+        <p>탄소세 강화를 통한 감축 목표 달성과 산업 비용 상승 사이의 균형을 논의합니다.</p>
+        <div class="chips">
+          <span class="badge cat-economy">경제</span>
+          <span class="badge status-ending">마감임박</span>
+        </div>
+        <div class="meta">논증 86 • 조회 3.1k • 마감 2025-01-22</div>
+      </article>
+
+      <article class="card">
+        <h3>[진행중] 대학 등록금 동결, 지속 가능한가</h3>
+        <p>등록금 동결 정책이 교육 질 하락을 초래하는지, 학생 부담 완화가 더 중요한지 토론합니다.</p>
+        <div class="chips">
+          <span class="badge cat-society">사회</span>
+          <span class="badge status-active">진행중</span>
+        </div>
+        <div class="meta">논증 64 • 조회 2.2k • 마감 2025-02-02</div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
+

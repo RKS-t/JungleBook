@@ -119,7 +119,8 @@ async def detect_fallacy(request: DetectRequest):
         
         text = request.text
         
-        # Topic 정보를 컨텍스트로 추가 (자연스러운 한국어 형식)
+        # 논증의 부모 토픽 정보를 컨텍스트로 추가 (자연스러운 한국어 형식)
+        # 토픽 정보가 있으면 항상 컨텍스트에 포함하여 분석 정확도 향상
         context_text = text
         if request.topic_title or request.topic_description:
             context_parts = []
@@ -129,7 +130,10 @@ async def detect_fallacy(request: DetectRequest):
                 context_parts.append(f"주제 설명: {request.topic_description}")
             context_parts.append(f"다음은 위 주제에 대한 논증입니다: {text}")
             context_text = "\n\n".join(context_parts)
-            logger.debug("토픽 컨텍스트가 분석에 추가되었습니다")
+            logger.info("논증의 부모 토픽 정보가 컨텍스트에 포함되었습니다 (주제: %s)", request.topic_title or "제목 없음")
+        else:
+            # 토픽 정보가 없는 경우 (일반적으로 발생하지 않아야 함)
+            logger.warning("논증의 부모 토픽 정보가 제공되지 않았습니다. 논증 내용만 분석합니다.")
         
         # 한국어 모델을 사용하므로 번역 불필요 (한국어 그대로 분석)
         # 영어 입력인 경우에만 한국어로 번역 (초기 학습 데이터 준비용)

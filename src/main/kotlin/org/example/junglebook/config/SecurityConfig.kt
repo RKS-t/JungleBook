@@ -6,6 +6,7 @@ import org.example.junglebook.service.MemberService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.AuthenticationProvider
@@ -89,6 +90,22 @@ class SecurityConfig(
                 auth
                     .requestMatchers(*PUBLIC_ENDPOINTS)
                     .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/debate/topics")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/debate/topics/hot")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/debate/topics/category/**")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/debate/topics/ongoing")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/debate/topics/ending-soon")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/debate/topics/{topicId}")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/debate/topics/search")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/board")
+                    .permitAll()
                     .anyRequest()
                     .authenticated()
             }
@@ -167,7 +184,6 @@ class SecurityConfig(
         response.writer.write(errorResponse)
     }
 
-    // 현재는 사용하지 않지만 향후 확장 가능
     private fun getPermitUris(): Array<String> {
         return permitUris
             .split(",")

@@ -35,8 +35,6 @@ class DebateReplyController(
         return ResponseEntity.status(HttpStatus.CREATED).body(replyResponse)
     }
 
-    // 토론 댓글은 수정 불가 (토론의 무결성을 위해)
-
     @Operation(summary = "댓글 삭제")
     @DeleteMapping("/{replyId}")
     fun deleteReply(
@@ -45,13 +43,8 @@ class DebateReplyController(
         @RequestParam(defaultValue = "false") deleteChildren: Boolean
     ): ResponseEntity<Void> {
         val memberId = getMemberId(member)
-        val deleted = debateReplyService.deleteReply(replyId, memberId, deleteChildren)
-        
-        return if (deleted) {
-            ResponseEntity.noContent().build()
-        } else {
-            ResponseEntity.notFound().build()
-        }
+        debateReplyService.deleteReply(replyId, memberId, deleteChildren)
+        return ResponseEntity.noContent().build()
     }
 
     @Operation(summary = "댓글 상세 조회")
@@ -146,9 +139,9 @@ class DebateReplyController(
 
     private fun getMemberId(member: Member): Long {
         val memberEntity = memberService.findActivateMemberByLoginId(member.loginId)
-        return memberEntity.id ?: throw org.example.junglebook.exception.GlobalException(
-            org.example.junglebook.exception.DefaultErrorCode.USER_NOT_FOUND
-        )
+        return requireNotNull(memberEntity.id) {
+            "Member ID must not be null"
+        }
     }
 }
 

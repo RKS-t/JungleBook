@@ -1,10 +1,10 @@
 package org.example.junglebook.repository.post
 
-import io.lettuce.core.dynamic.annotation.Param
 import org.example.junglebook.entity.post.PostFileEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 
 @Repository
@@ -28,6 +28,5 @@ interface PostFileRepository : JpaRepository<PostFileEntity, Long> {
 
     fun findByUserId(userId: Long?): List<PostFileEntity>
 
-    // 첨부되지 않은 파일들 조회 (정리용)
     fun findByAttachYnFalse(): List<PostFileEntity>
 }

@@ -1,0 +1,10 @@
+- Write tests using **JUnit 5**, **Mockito**, and **AssertJ**. (JUnit 5, Mockito, AssertJ 사용)
+- Use the **given–when–then** pattern for readability. (given–when–then 구조 사용)
+- Name test classes as `ClassNameTest` and methods as `shouldDoSomething_whenCondition`. (테스트 클래스는 ClassNameTest, 메서드는 설명적 이름 사용)
+- Prefer **descriptive test names** that explain behavior, not implementation.
+- Test both **happy path** and **failure cases**. (성공 및 실패 케이스 모두 테스트)
+- Use **@SpringBootTest** only when context loading is necessary. (@SpringBootTest는 필요한 경우에만)
+- For unit tests, prefer `@ExtendWith(MockitoExtension.class)` and mock dependencies.
+- Avoid unnecessary stubbing or verifying interactions. (불필요한 목킹/검증 피함)
+- Keep tests **isolated**, **deterministic**, and **fast**. (테스트는 독립적, 결정적, 빠르게 유지)
+- Do not generate comments, markdown, or documentation text. (불필요한 주석, 마크다운, 문서 출력 금지)

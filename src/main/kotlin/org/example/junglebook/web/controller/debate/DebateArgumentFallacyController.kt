@@ -169,8 +169,10 @@ class DebateArgumentFallacyController(
 
     private fun getMemberId(member: Member): Long {
         val memberEntity = memberService.findActivateMemberByLoginId(member.loginId)
-        return memberEntity.id ?: throw org.example.junglebook.exception.GlobalException(
-            org.example.junglebook.exception.DefaultErrorCode.USER_NOT_FOUND
-        )
+        return requireNotNull(memberEntity.id) {
+            throw org.example.junglebook.exception.GlobalException(
+                org.example.junglebook.exception.DefaultErrorCode.USER_NOT_FOUND
+            )
+        }
     }
 }

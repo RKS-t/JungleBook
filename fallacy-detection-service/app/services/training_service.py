@@ -14,7 +14,7 @@ class TrainingService:
         self.tokenizer = None
         self.model = None
     
-    def prepare_training_data(self, training_data: List[Dict]) -> Dataset:
+    def prepare_training_data(self, training_data: List[Dict]) -> tuple:
         """재학습 데이터 준비"""
         if not training_data:
             raise ValueError("Training data is empty")
@@ -47,14 +47,28 @@ class TrainingService:
             tokenizer = AutoTokenizer.from_pretrained(self.model_name)
             
             # 토크나이징 (한국어 모델, max_length 512로 증가)
-            tokenized_dataset = dataset.map(
-                lambda examples: tokenizer(
+            def tokenize_function(examples):
+                tokenized = tokenizer(
                     examples["text"],
                     truncation=True,
                     padding="max_length",
                     max_length=512  # 한국어 모델은 512 토큰 지원
-                ),
-                batched=True
+                )
+                # labels는 그대로 유지
+                tokenized["labels"] = examples["labels"]
+                return tokenized
+            
+            tokenized_dataset = dataset.map(
+                tokenize_function,
+                batched=True,
+                remove_columns=["text", "label"] if "label" in dataset.column_names else ["text"]
+            )
+            
+            # Tensor 포맷 설정 (labels는 long)
+            tokenized_dataset.set_format(
+                type="torch",
+                columns=["input_ids", "attention_mask", "labels"],
+                output_all_columns=False
             )
             
             # 모델 초기화
@@ -67,6 +81,9 @@ class TrainingService:
             num_samples = len(training_data)
             num_epochs = 3 if num_samples >= 100 else 1  # 작은 데이터셋은 1 epoch
             
+            # MPS (Apple Silicon) 호환성을 위해 CPU 사용 강제
+            use_cpu = not torch.cuda.is_available() or torch.backends.mps.is_available()
+            
             training_args = TrainingArguments(
                 output_dir=output_dir,
                 num_train_epochs=num_epochs,
@@ -77,7 +94,8 @@ class TrainingService:
                 save_steps=1000,  # 작은 데이터셋에서는 저장 스킵
                 eval_strategy="no",
                 report_to="none",
-                save_total_limit=1  # 모델 저장 공간 절약
+                save_total_limit=1,  # 모델 저장 공간 절약
+                use_cpu=use_cpu  # MPS 호환성 문제 해결
             )
             
             # 트레이너 설정
@@ -107,4 +125,3 @@ class TrainingService:
         except Exception as e:
             logger.error(f"Training failed: {e}", exc_info=True)
             raise
-

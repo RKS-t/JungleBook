@@ -38,25 +38,23 @@ class JwtService {
         return Json.decodeFromString<JwtPayload>(claims.subject)
     }
 
-    // Access Token인지 검증 (isAccessToken이 true인 경우만 통과)
     fun extractAccessToken(token: String): JwtPayload {
         val jwtPayload = extract(extractAllClaims(token))
         
-        if (!jwtPayload.isAccessToken) {
+        require(jwtPayload.isAccessToken) {
             logger().warn("Invalid token type: expected Access Token. token: {}", token)
-            throw InvalidTokenException(HttpStatus.BAD_REQUEST, "Invalid token type: expected Access Token")
+            InvalidTokenException(HttpStatus.BAD_REQUEST, "Invalid token type: expected Access Token")
         }
 
         return jwtPayload
     }
 
-    // Refresh Token인지 검증 (isAccessToken이 false인 경우만 통과)
     fun extractRefreshToken(token: String): JwtPayload {
         val jwtPayload = extract(extractAllClaims(token))
         
-        if (jwtPayload.isAccessToken) {
+        require(!jwtPayload.isAccessToken) {
             logger().warn("Invalid token type: expected Refresh Token. token: {}", token)
-            throw InvalidTokenException(HttpStatus.BAD_REQUEST, "Invalid token type: expected Refresh Token")
+            InvalidTokenException(HttpStatus.BAD_REQUEST, "Invalid token type: expected Refresh Token")
         }
 
         return jwtPayload

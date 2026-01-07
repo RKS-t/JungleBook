@@ -58,11 +58,9 @@ fun SecurityContext.loginId(): String {
 }
 
 fun SecurityContext.role(): String? {
-    // TODO: RBAC 구현 시 실제 역할 반환
     return null
 }
 
-// 서울 시간대 기준으로 Epoch 밀리초 반환
 fun LocalDateTime.toEpochMilli(): Long {
     return this
         .atZone(ZoneId.of(JBConstants.ZONE_ID_SEOUL))

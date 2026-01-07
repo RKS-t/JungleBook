@@ -33,6 +33,11 @@ class FallacyAppealService(
             .filter { it.activeYn }
             .orElseThrow { GlobalException(DefaultErrorCode.WRONG_ACCESS, "논증을 찾을 수 없습니다.") }
 
+        if (argument.userId != userId) {
+            logger.warn("Unauthorized appeal attempt: argumentId: {}, userId: {}, argumentOwnerId: {}", argumentId, userId, argument.userId)
+            throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "논증 작성자만 의의를 제기할 수 있습니다.")
+        }
+
         // AI의 원래 판단 저장
         val aiOriginalJudgment = buildString {
             append("오류 여부: ${argument.fallacyHasFallacy ?: false}\n")

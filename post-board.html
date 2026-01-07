@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>게시판</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #fff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --sub: #475569;
+      --primary: #2563eb;
+      --divider: #cbd5e1;
+      --notice-bg: #f8eaf0;
+      --notice-border: #bc6371;
+      --notice-text: #aa304e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Pretendard", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(140deg, #0f172a, #1e293b);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 32px 20px 60px;
+      display: flex;
+      justify-content: center;
+    }
+    .page {
+      width: min(1200px, 100%);
+      background: var(--bg);
+      border: 1px solid #e5eaf0;
+      border-radius: 16px;
+      box-shadow: 0 20px 48px rgba(15, 23, 42, 0.14);
+      padding: 32px;
+    }
+    .header h1 { margin: 0 0 8px; font-size: 28px; font-weight: 700; }
+    .header p { margin: 0 0 24px; font-size: 15px; color: var(--sub); }
+    .search-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .search {
+      flex: 1;
+      display: flex; align-items: center; gap: 12px;
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 12px; padding: 0 16px; height: 56px;
+      min-width: 280px;
+    }
+    .search input {
+      flex: 1; border: none; outline: none;
+      font-size: 15px; background: transparent; color: var(--text);
+    }
+    .search-select {
+      height: 56px;
+      min-width: 160px;
+      padding: 0 40px 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      font-size: 14px;
+      color: var(--text);
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.41 0L6 4.58 10.59 0 12 1.41 6 7.41 0 1.41z' fill='%23263248'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+    }
+    .filters { display: flex; gap: 8px; margin: 16px 0 20px; align-items: center; }
+    .label { 
+      font-size: 13px; 
+      font-weight: 700; 
+      color: #243447; 
+      display: flex;
+      align-items: center;
+      height: 32px;
+    }
+    .chip {
+      padding: 1px 12px 0 12px; 
+      border-radius: 16px; 
+      border: 1px solid var(--border);
+      background: #fff; 
+      font-size: 13px; 
+      color: var(--sub); 
+      cursor: pointer;
+      transition: background 0.16s ease, color 0.16s ease, border 0.16s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 32px;
+      min-width: fit-content;
+      line-height: 1;
+      font-weight: 600;
+    }
+    .chip.primary { border-color: var(--primary); color: var(--primary); background: #e8f0ff; }
+    .table-container {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      /* 가로가 좁을 때 스크롤로 모든 컬럼을 볼 수 있도록 처리 */
+      overflow-x: auto;
+    }
+    .table-header {
+      display: grid;
+      grid-template-columns: 80px minmax(200px, 1fr) 120px 80px 80px 80px 120px;
+      gap: 0;
+      padding: 0;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 700;
+      color: #243447;
+      min-width: 900px;
+    }
+    .table-header > div,
+    .table-row > div {
+      padding: 14px 12px;
+      border-left: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .table-header > div:first-child,
+    .table-row > div:first-child { border-left: none; }
+    .table-row {
+      display: grid;
+      grid-template-columns: 80px minmax(200px, 1fr) 120px 80px 80px 80px 120px;
+      gap: 0;
+      padding: 0;
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+      transition: background 0.15s ease;
+      min-width: 900px;
+    }
+    .table-row:last-child { border-bottom: none; }
+    .table-row:hover { background: #f8fafc; }
+    .row-no { 
+      font-size: 13px; 
+      color: var(--sub); 
+      text-align: center;
+      justify-content: center;
+    }
+    .row-title { 
+      font-size: 14px; 
+      color: var(--text); 
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-align: center;
+    }
+    .row-title a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .row-title a:hover {
+      color: var(--primary);
+    }
+    .notice-badge {
+      padding: 0 10px;
+      height: 26px;
+      border-radius: 13px;
+      background: var(--notice-bg);
+      border: 1px solid var(--notice-border);
+      color: var(--notice-text);
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .file-icon {
+      font-size: 14px;
+      color: var(--sub);
+    }
+    .row-author { 
+      font-size: 13px;
+      color: var(--sub);
+      text-align: center;
+    }
+    .row-view, .row-like, .row-reply, .row-date {
+      font-size: 13px;
+      color: var(--sub);
+      text-align: right;
+    }
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 24px;
+    }
+    .write-btn {
+      padding: 0 20px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.16s ease;
+    }
+    .write-btn:hover {
+      background: #1d4ed8;
+    }
+    .pagination {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+    }
+    .pagination a, .pagination span {
+      font-size: 13px;
+      color: var(--sub);
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+    .pagination a:hover {
+      background: #e8f0ff;
+      color: var(--primary);
+    }
+    .pagination .active {
+      color: var(--primary);
+      font-weight: 700;
+    }
+    @media (max-width: 1200px) {
+      .table-header, .table-row {
+        grid-template-columns: 70px minmax(150px, 1fr) 100px 70px 70px 70px 110px;
+        gap: 15px;
+        padding: 14px 16px;
+      }
+    }
+    @media (max-width: 900px) {
+      .table-header, .table-row {
+        grid-template-columns: 60px minmax(120px, 1fr) 90px 60px 60px 60px 100px;
+        gap: 12px;
+        padding: 12px 14px;
+        font-size: 12px;
+      }
+      .row-title { font-size: 13px; }
+    }
+    @media (max-width: 768px) {
+      .page { padding: 24px 18px; }
+      .header h1 { font-size: 24px; }
+      .search { height: 52px; }
+      .table-header, .table-row {
+        grid-template-columns: 50px minmax(100px, 1fr) 80px 50px 50px 50px 90px;
+        gap: 8px;
+        padding: 10px 12px;
+        font-size: 11px;
+      }
+      .row-title { font-size: 12px; }
+      .row-author, .row-view, .row-like, .row-reply, .row-date {
+        font-size: 11px;
+      }
+    }
+    @media (max-width: 600px) {
+      .table-header, .table-row {
+        grid-template-columns: 40px minmax(80px, 1fr) 70px 45px 45px 45px 80px;
+        gap: 6px;
+        padding: 8px 10px;
+      }
+      .row-title { font-size: 11px; }
+      .row-author, .row-view, .row-like, .row-reply, .row-date {
+        font-size: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <h1>게시판</h1>
+      <p>게시글을 검색하고 읽어보세요</p>
+    </header>
+
+    <div class="search-row">
+      <div class="search">
+        <input type="text" placeholder="게시글을 검색하세요 (제목/내용/작성자)" id="searchInput" />
+      </div>
+      <select class="search-select" id="searchType">
+        <option value="TITLE" selected>제목</option>
+        <option value="TITLE_CONTENT">제목 + 내용</option>
+        <option value="AUTHOR">작성자</option>
+      </select>
+    </div>
+
+    <div class="filters" style="margin-top:12px;">
+      <span class="label">정렬:</span>
+      <button class="chip primary" data-sort="LATEST">최신순</button>
+      <button class="chip" data-sort="POPULAR">인기순</button>
+      <button class="chip" data-sort="MOST_VIEWED">조회순</button>
+      <button class="chip" data-sort="MOST_LIKED">좋아요순</button>
+    </div>
+
+    <div class="table-container">
+      <div class="table-header">
+        <div>번호</div>
+        <div>제목</div>
+        <div>작성자</div>
+        <div>조회</div>
+        <div>좋아요</div>
+        <div>댓글</div>
+        <div>작성일</div>
+      </div>
+
+      <div id="postList">
+        <!-- 공지사항 -->
+        <div class="table-row">
+          <div class="row-no">
+            <span class="notice-badge">공지</span>
+          </div>
+          <div class="row-title">
+            <a href="#">[공지] 게시판 이용 안내 및 규칙</a>
+          </div>
+          <div class="row-author">관리자</div>
+          <div class="row-view">1,234</div>
+          <div class="row-like">45</div>
+          <div class="row-reply">12</div>
+          <div class="row-date">2025.01.15</div>
+        </div>
+
+        <!-- 일반 게시글 -->
+        <div class="table-row">
+          <div class="row-no">123</div>
+          <div class="row-title">
+            <a href="#">게시판 개편 안내 및 새로운 기능 소개</a>
+          </div>
+          <div class="row-author">홍길동</div>
+          <div class="row-view">856</div>
+          <div class="row-like">32</div>
+          <div class="row-reply">8</div>
+          <div class="row-date">2025.01.20</div>
+        </div>
+
+        <div class="table-row">
+          <div class="row-no">122</div>
+          <div class="row-title">
+            <a href="#">질문이 있어서 글 남깁니다</a>
+          </div>
+          <div class="row-author">김철수</div>
+          <div class="row-view">234</div>
+          <div class="row-like">5</div>
+          <div class="row-reply">3</div>
+          <div class="row-date">2025.01.19</div>
+        </div>
+
+        <div class="table-row">
+          <div class="row-no">121</div>
+          <div class="row-title">
+            <a href="#">자료 공유합니다 <span class="file-icon">📎</span></a>
+          </div>
+          <div class="row-author">이영희</div>
+          <div class="row-view">567</div>
+          <div class="row-like">18</div>
+          <div class="row-reply">6</div>
+          <div class="row-date">2025.01.18</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <div></div>
+      <div class="pagination">
+        <a href="#">&lt; 이전</a>
+        <span class="active">1</span>
+        <a href="#">2</a>
+        <a href="#">3</a>
+        <a href="#">다음 &gt;</a>
+      </div>
+      <button class="write-btn">글쓰기</button>
+    </div>
+  </main>
+
+  <script>
+    const boardId = 1; // 게시판 ID
+    let currentSort = 'LATEST';
+    let currentPage = 0;
+    let currentKeyword = '';
+    let currentSearchType = 'TITLE'; // TITLE, TITLE_CONTENT, AUTHOR
+
+    const sortChips = document.querySelectorAll('.filters .chip');
+    const searchTypeSelect = document.getElementById('searchType');
+
+    // 정렬 버튼 클릭
+    sortChips.forEach(chip => {
+      chip.addEventListener('click', function() {
+        sortChips.forEach(c => c.classList.remove('primary'));
+        this.classList.add('primary');
+        currentSort = this.dataset.sort;
+        loadPosts();
+      });
+    });
+
+    // 검색 타입 선택
+    searchTypeSelect.addEventListener('change', function() {
+      currentSearchType = this.value;
+      loadPosts();
+    });
+
+    // 검색
+    const searchInput = document.getElementById('searchInput');
+    let searchTimeout;
+    searchInput.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        currentKeyword = this.value.trim();
+        currentPage = 0;
+        loadPosts();
+      }, 500);
+    });
+
+    // 게시글 목록 로드
+    async function loadPosts() {
+      try {
+        const params = new URLSearchParams({
+          boardId: boardId,
+          sortType: currentSort,
+          pageNo: currentPage,
+          limit: 20
+        });
+        if (currentKeyword) {
+          params.append('keyword', currentKeyword);
+        }
+        // 백엔드가 searchType을 지원할 경우 사용, 지원하지 않더라도 추가 파라미터는 무시됨
+        params.append('searchType', currentSearchType);
+
+        const response = await fetch(`/api/posts?${params}`);
+        if (!response.ok) throw new Error('게시글을 불러오는데 실패했습니다.');
+
+        const data = await response.json();
+        renderPosts(data.posts);
+      } catch (error) {
+        console.error('Error loading posts:', error);
+      }
+    }
+
+    // 게시글 렌더링
+    function renderPosts(posts) {
+      const postList = document.getElementById('postList');
+      const notices = posts.filter(p => p.noticeYn);
+      const normalPosts = posts.filter(p => !p.noticeYn);
+
+      postList.innerHTML = '';
+
+      // 공지사항 먼저 표시
+      notices.forEach(post => {
+        postList.appendChild(createPostRow(post, true));
+      });
+
+      // 일반 게시글 표시
+      normalPosts.forEach(post => {
+        postList.appendChild(createPostRow(post, false));
+      });
+    }
+
+    // 게시글 행 생성
+    function createPostRow(post, isNotice) {
+      const row = document.createElement('div');
+      row.className = 'table-row';
+
+      const date = new Date(post.createdAt);
+      const dateStr = `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+
+      row.innerHTML = `
+        <div class="row-no">
+          ${isNotice ? '<span class="notice-badge">공지</span>' : post.id || ''}
+        </div>
+        <div class="row-title">
+          <a href="/post/${post.id}">${post.title}${post.fileYn ? ' <span class="file-icon">📎</span>' : ''}</a>
+        </div>
+        <div class="row-author">${post.authorNickname}</div>
+        <div class="row-view">${post.viewCnt.toLocaleString()}</div>
+        <div class="row-like">${post.likeCnt}</div>
+        <div class="row-reply">${post.replyCnt}</div>
+        <div class="row-date">${dateStr}</div>
+      `;
+
+      return row;
+    }
+
+    // 글쓰기 버튼
+    document.querySelector('.write-btn').addEventListener('click', () => {
+      window.location.href = `/post/write?boardId=${boardId}`;
+    });
+
+    // 초기 로드
+    loadPosts();
+  </script>
+</body>
+</html>
+

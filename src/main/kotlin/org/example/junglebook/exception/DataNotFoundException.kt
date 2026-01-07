@@ -1,4 +1,4 @@
-package kr.co.minust.api.exception
+package org.example.junglebook.exception
 
 import org.springframework.http.HttpStatus
 
