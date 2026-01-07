@@ -9,6 +9,5 @@ interface BoardRepository : JpaRepository<BoardEntity, Int> {
 
     override fun findAll(): List<BoardEntity>
 
-    // 활성화된 게시판만 조회
     fun findByUseYnTrue(): List<BoardEntity>
 }

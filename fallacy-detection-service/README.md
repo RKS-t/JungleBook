@@ -45,9 +45,18 @@ cp .env.example .env
 
 `.env` 파일 수정:
 ```env
-# OpenAI API 설정 (번역 기능용, 선택사항)
+# AI API 제공자 선택 (openai 또는 google)
+AI_PROVIDER=openai  # 또는 "google"
+
+# OpenAI API 설정 (AI_PROVIDER=openai일 때 사용)
 OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=gpt-4
+
+# Google AI API 설정 (AI_PROVIDER=google일 때 사용)
+GOOGLE_AI_API_KEY=your_google_ai_api_key_here
+GOOGLE_AI_MODEL=gemini-pro
+
+# 번역 설정
 TRANSLATION_ENABLED=false
 
 # 모델 설정
@@ -58,6 +67,15 @@ DEFAULT_MODEL_NAME=monologg/koelectra-base-v3-discriminator  # 한국어 모델
 API_HOST=0.0.0.0
 API_PORT=8000
 ```
+
+**AI 제공자 선택:**
+- `AI_PROVIDER=openai`: OpenAI API 사용 (기본값)
+- `AI_PROVIDER=google`: Google AI API 사용
+
+**Google AI API 키 발급:**
+1. [Google AI Studio](https://makersuite.google.com/app/apikey)에서 API 키 발급
+2. `.env` 파일에 `GOOGLE_AI_API_KEY` 설정
+3. `AI_PROVIDER=google` 설정
 
 ## 실행
 

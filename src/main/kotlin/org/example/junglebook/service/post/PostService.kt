@@ -13,6 +13,7 @@ import org.example.junglebook.repository.post.PostCountHistoryRepository
 import org.example.junglebook.repository.post.PostFileRepository
 import org.example.junglebook.repository.post.PostRepository
 import org.example.junglebook.service.MemberService
+import org.example.junglebook.util.logger
 import org.example.junglebook.web.dto.*
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
@@ -34,9 +35,10 @@ class PostService(
 
     @Transactional(readOnly = true)
     fun pageablePostList(board: BoardEntity, pageNo: Int, searchType: Int, searchValue: String?, limit: Int): PostListResponse {
+        val boardId = requireNotNull(board.id) { "Board ID must not be null" }
         val pageable = PageRequest.of(pageNo, limit)
-        val list = postRepository.findPageableList(board.id!!, searchType, searchValue, pageable)
-        val totalCount = postRepository.countByBoardIdWithSearch(board.id!!, searchType, searchValue)
+        val list = postRepository.findPageableList(boardId, searchType, searchValue, pageable)
+        val totalCount = postRepository.countByBoardIdWithSearch(boardId, searchType, searchValue)
 
         return PostListResponse.of(totalCount, pageNo, list)
     }
@@ -58,37 +60,51 @@ class PostService(
         )
 
         if (existCount > 0) {
+            logger().warn("Already exists count history for postId: {}, userId: {}", id, userId)
             throw GlobalException(DefaultErrorCode.ALREADY_EXISTS)
         }
 
         val updateResult = when (countType) {
             CountType.LIKE -> postRepository.increaseLikeCount(id)
             CountType.DISLIKE -> {
-                // 싫어요는 PostLikeEntity로 관리하지 않으므로 별도 처리 필요
+                logger().warn("DISLIKE count type is not supported for postId: {}", id)
                 throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "싫어요 기능은 PostLikeEntity로 관리되지 않습니다.")
             }
-            else -> throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
+            else -> {
+                logger().error("Invalid count type: {} for postId: {}", countType, id)
+                throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
+            }
         }
 
-        if (updateResult > 0) {
-            val history = PostCountHistoryEntity(
-                refType = PostReferenceType.POST,
-                refId = id,
-                userId = userId,
-                type = countType
-            )
-            postCountHistoryRepository.save(history)
-
-            val updatedPost = postRepository.findById(id)
-                .orElseThrow { GlobalException(DefaultErrorCode.WRONG_ACCESS) }
-
-            return when (countType) {
-                CountType.LIKE -> updatedPost.likeCnt
-                CountType.DISLIKE -> updatedPost.dislikeCnt
-                else -> throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
-            }
-        } else {
+        if (updateResult <= 0) {
+            logger().error("Failed to increase count for postId: {}, countType: {}", id, countType)
             throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
+        }
+
+        val history = PostCountHistoryEntity(
+            refType = PostReferenceType.POST,
+            refId = id,
+            userId = userId,
+            type = countType
+        )
+        postCountHistoryRepository.save(history)
+
+        val updatedPost = postRepository.findById(id)
+            .orElseGet {
+                logger().error("Post not found after update: postId: {}", id)
+                throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
+            }
+
+        return when (countType) {
+            CountType.LIKE -> updatedPost.likeCnt
+            CountType.DISLIKE -> {
+                logger().error("DISLIKE count type should not reach here for postId: {}", id)
+                throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
+            }
+            else -> {
+                logger().error("Invalid count type in return: {} for postId: {}", countType, id)
+                throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
+            }
         }
     }
 
@@ -96,11 +112,12 @@ class PostService(
     fun createPost(boardId: Int, request: PostCreateRequest, userId: Long): PostResponse {
         val entity = request.toEntity(boardId, userId, request.authorNickname ?: "익명")
         val savedEntity = postRepository.save(entity)
+        val savedEntityId = requireNotNull(savedEntity.id) { "Saved post ID must not be null" }
 
         request.fileIds?.forEach { fileId ->
             postFileRepository.updateAttachStatus(
                 refType = PostReferenceType.POST.value,
-                refId = savedEntity.id!!,
+                refId = savedEntityId,
                 id = fileId,
                 userId = savedEntity.userId
             )
@@ -196,6 +213,7 @@ class PostService(
         val post = postRepository.findByIdAndUseYnTrue(postId) ?: return null
         
         if (post.userId != userId) {
+            logger().warn("Unauthorized update attempt: postId: {}, userId: {}, postOwnerId: {}", postId, userId, post.userId)
             throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "작성자만 수정할 수 있습니다.")
         }
         
@@ -208,16 +226,17 @@ class PostService(
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
-    fun deletePost(postId: Long, userId: Long): Boolean {
-        val post = postRepository.findByIdAndUseYnTrue(postId) ?: return false
+    fun deletePost(postId: Long, userId: Long) {
+        val post = postRepository.findByIdAndUseYnTrue(postId)
+            ?: throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "게시글을 찾을 수 없습니다.")
         
         if (post.userId != userId) {
+            logger().warn("Unauthorized delete attempt: postId: {}, userId: {}, postOwnerId: {}", postId, userId, post.userId)
             throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "작성자만 삭제할 수 있습니다.")
         }
         
         post.softDelete()
         postRepository.save(post)
-        return true
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
@@ -244,9 +263,7 @@ class PostService(
                 String.format("%06d", ThreadLocalRandom.current().nextInt(1000000)) +
                 ".${FilenameUtils.getExtension(file.originalFilename)}"
 
-        // TODO: S3Service 구현 후 활성화
-        // val url = s3Service.saveFile(file, "/post/$boardId/$newFileName")
-        val url = "/temp/post/$boardId/$newFileName" // 임시 URL
+        val url = "/temp/post/$boardId/$newFileName"
 
         val entity = PostFileEntity(
             url = url,

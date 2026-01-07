@@ -10,9 +10,16 @@ class Settings:
     API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
     
+    # AI API 설정 (OpenAI 또는 Google AI 선택)
+    AI_PROVIDER: str = os.getenv("AI_PROVIDER", "openai").lower()  # "openai" 또는 "google"
+    
     # OpenAI API 설정
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4")
+    
+    # Google AI API 설정
+    GOOGLE_AI_API_KEY: str = os.getenv("GOOGLE_AI_API_KEY", "")
+    GOOGLE_AI_MODEL: str = os.getenv("GOOGLE_AI_MODEL", "gemini-2.0-flash")
     
     # 모델 설정
     FALLACY_MODEL_PATH: str = os.getenv("FALLACY_MODEL_PATH", "./models/fallacy_detector")

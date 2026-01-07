@@ -1,5 +1,6 @@
 package org.example.junglebook.service.debate
 
+import org.example.junglebook.constant.JBConstants
 import org.example.junglebook.exception.DefaultErrorCode
 import org.example.junglebook.exception.GlobalException
 import org.example.junglebook.entity.debate.DebateArgumentEntity
@@ -10,8 +11,10 @@ import org.example.junglebook.enums.VoteType
 import org.example.junglebook.repository.MemberRepository
 import org.example.junglebook.repository.debate.DebateArgumentRepository
 import org.example.junglebook.repository.debate.DebateFileRepository
+import org.example.junglebook.repository.debate.DebateTopicRepository
 import org.example.junglebook.repository.debate.DebateVoteRepository
 import org.example.junglebook.service.fallacy.FallacyDetectionService
+import org.example.junglebook.util.logger
 import org.example.junglebook.web.dto.DebateArgumentListResponse
 import org.example.junglebook.web.dto.DebateArgumentResponse
 import org.example.junglebook.web.dto.DebateArgumentSimpleResponse
@@ -19,6 +22,7 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Isolation
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 
 
 
@@ -26,30 +30,22 @@ import org.springframework.transaction.annotation.Transactional
 class DebateArgumentService(
     private val debateArgumentRepository: DebateArgumentRepository,
     private val debateFileRepository: DebateFileRepository,
+    private val debateTopicRepository: DebateTopicRepository,
     private val debateTopicService: DebateTopicService,
-    private val fallacyDetectionService: FallacyDetectionService
+    private val fallacyDetectionService: FallacyDetectionService,
+    private val transactionTemplate: TransactionTemplate
 ) {
 
-    /**
-     * 1. 인기 논증 목록 (입장별)
-     */
     @Transactional(readOnly = true)
-    fun popularList(topicId: Long): Map<ArgumentStance, List<DebateArgumentSimpleResponse>> {
-        val popular = mutableMapOf<ArgumentStance, List<DebateArgumentSimpleResponse>>()
-
-        ArgumentStance.values().forEach { stance ->
+    fun getPopularList(topicId: Long): Map<ArgumentStance, List<DebateArgumentSimpleResponse>> {
+        return ArgumentStance.values().associateWith { stance ->
             val arguments = debateArgumentRepository.findPopularByStance(topicId, stance)
-            popular[stance] = DebateArgumentSimpleResponse.of(arguments.take(5)) // 상위 5개만
+            DebateArgumentSimpleResponse.of(arguments.take(JBConstants.DEBATE_POPULAR_ARGUMENTS_LIMIT))
         }
-
-        return popular
     }
 
-    /**
-     * 2. 입장별 논증 페이징 목록
-     */
     @Transactional(readOnly = true)
-    fun pageableList(topicId: Long, stance: ArgumentStance, pageNo: Int, limit: Int): DebateArgumentListResponse {
+    fun getPageableList(topicId: Long, stance: ArgumentStance, pageNo: Int, limit: Int): DebateArgumentListResponse {
         val totalCount = debateArgumentRepository.countByTopicIdAndStanceAndActiveYnTrue(topicId, stance)
         val pageable = PageRequest.of(pageNo, limit)
         val list = debateArgumentRepository.findByTopicIdAndStanceAndActiveYnTrueOrderByCreatedAtDesc(
@@ -59,106 +55,100 @@ class DebateArgumentService(
         return DebateArgumentListResponse.of(totalCount.toInt(), pageNo, list)
     }
 
-    /**
-     * 3. 논증 상세 조회
-     */
     @Transactional(readOnly = true)
-    fun view(topicId: Long, id: Long): DebateArgumentResponse? {
-        val argument = debateArgumentRepository.findByIdAndTopicIdAndActiveYnTrue(id, topicId)
-        return argument?.let { DebateArgumentResponse.of(it) }
+    fun getArgument(topicId: Long, id: Long, increaseView: Boolean = false): DebateArgumentResponse? {
+        val argument = debateArgumentRepository.findByIdAndTopicIdAndActiveYnTrue(id, topicId) ?: return null
+        
+        if (increaseView) {
+            debateArgumentRepository.increaseViewCount(id)
+        }
+        
+        return DebateArgumentResponse.of(argument)
     }
 
-    /**
-     * 4. 조회수 증가
-     */
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun increaseViewCount(id: Long) {
         debateArgumentRepository.increaseViewCount(id)
     }
 
-    /**
-     * 5. 논증 생성
-     */
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun createArgument(entity: DebateArgumentEntity, fileIds: List<Long>?): DebateArgumentResponse {
-        // 글자 수 제한 검증 (이중 체크)
-        val maxContentLength = 5000
-        if (entity.content.length > maxContentLength) {
+        if (entity.content.length > JBConstants.DEBATE_ARGUMENT_MAX_CONTENT_LENGTH) {
+            logger().warn("Argument content length exceeded: {} characters (max: {})", entity.content.length, JBConstants.DEBATE_ARGUMENT_MAX_CONTENT_LENGTH)
             throw GlobalException(
                 DefaultErrorCode.WRONG_ACCESS,
-                "논증 내용은 최대 ${maxContentLength}자까지 작성할 수 있습니다. (현재: ${entity.content.length}자)"
+                "논증 내용은 최대 ${JBConstants.DEBATE_ARGUMENT_MAX_CONTENT_LENGTH}자까지 작성할 수 있습니다. (현재: ${entity.content.length}자)"
             )
         }
         
-        // 논증 저장
         val savedEntity = debateArgumentRepository.save(entity)
+        val savedEntityId = requireNotNull(savedEntity.id) { "Saved argument ID must not be null" }
 
-        // 파일 첨부 처리
         fileIds?.forEach { fileId ->
             debateFileRepository.updateAttachStatus(
                 refType = DebateReferenceType.ARGUMENT.value,
-                refId = savedEntity.id!!,
+                refId = savedEntityId,
                 id = fileId,
                 userId = savedEntity.userId
             )
         }
 
-        // 토픽 논증 수 증가
         debateTopicService.increaseArgumentCount(entity.topicId)
 
-        // 토픽 정보 조회
-        val topic = debateTopicService.getTopicDetail(entity.topicId, increaseView = false)
+        // 논증의 부모 토픽 정보를 조회하여 컨텍스트에 포함
+        val topic = debateTopicRepository.findByIdAndActiveYnTrue(entity.topicId)
 
-        // 논리 오류 탐지 (비동기)
         fallacyDetectionService.detectFallacyAsync(
             text = savedEntity.content,
             language = "ko",
-            topicTitle = topic?.topic?.title,
-            topicDescription = topic?.topic?.description
+            topicTitle = topic?.title,
+            topicDescription = topic?.description
         ).thenAccept { result ->
-                result?.let {
-                    savedEntity.apply {
-                        fallacyHasFallacy = it.hasFallacy
-                        fallacyType = it.fallacyType
-                        fallacyConfidence = it.confidence
-                        fallacyExplanation = it.explanation
-                        fallacyCheckedYn = true
+                result?.let { fallacyResult ->
+                    val argumentId = savedEntityId
+                    try {
+                        transactionTemplate.executeWithoutResult { status ->
+                            debateArgumentRepository.findById(argumentId).ifPresent { entity ->
+                                entity.fallacyHasFallacy = fallacyResult.hasFallacy
+                                entity.fallacyType = fallacyResult.fallacyType
+                                entity.fallacyConfidence = fallacyResult.confidence
+                                entity.fallacyExplanation = fallacyResult.explanation
+                                entity.fallacyCheckedYn = true
+                                debateArgumentRepository.save(entity)
+                                logger().info("Fallacy detection result saved: argumentId=$argumentId, hasFallacy=${fallacyResult.hasFallacy}, type=${fallacyResult.fallacyType}")
+                            } ?: logger().warn("Argument not found for fallacy update: argumentId=$argumentId")
+                        }
+                    } catch (e: Exception) {
+                        logger().error("Failed to save fallacy detection result: argumentId=$argumentId", e)
                     }
-                    debateArgumentRepository.save(savedEntity)
                 }
+            }.exceptionally { throwable ->
+                logger().error("Failed to save fallacy detection result: argumentId=$savedEntityId", throwable)
+                null
             }
 
         return DebateArgumentResponse.of(savedEntity)
     }
 
-    /**
-     * 7. 논증 삭제 (Soft Delete)
-     */
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
-    fun deleteArgument(topicId: Long, id: Long, userId: Long): Boolean {
+    fun deleteArgument(topicId: Long, id: Long, userId: Long) {
         val argument = debateArgumentRepository.findByIdAndTopicIdAndActiveYnTrue(id, topicId)
-            ?: return false
+            ?: throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "논증을 찾을 수 없습니다.")
 
-        // 권한 검증
         if (argument.userId != userId) {
+            logger().warn("Unauthorized argument delete attempt: argumentId: {}, userId: {}, argumentOwnerId: {}", id, userId, argument.userId)
             throw GlobalException(DefaultErrorCode.DEBATE_ARGUMENT_DELETE_DENIED)
         }
 
-        // Soft Delete
         val result = debateArgumentRepository.softDelete(id, userId)
 
-        if (result > 0) {
-            // 토픽 논증 수 감소
-            debateTopicService.decreaseArgumentCount(topicId)
-            return true
+        if (result <= 0) {
+            throw GlobalException(DefaultErrorCode.WRONG_ACCESS)
         }
 
-        return false
+        debateTopicService.decreaseArgumentCount(topicId)
     }
 
-    /**
-     * 8. 작성자별 논증 조회
-     */
     @Transactional(readOnly = true)
     fun getArgumentsByAuthor(userId: Long, pageNo: Int, limit: Int): DebateArgumentListResponse {
         val pageable = PageRequest.of(pageNo, limit)
@@ -168,9 +158,6 @@ class DebateArgumentService(
         return DebateArgumentListResponse.of(totalCount.toInt(), pageNo, list)
     }
 
-    /**
-     * 9. 토픽별 입장 통계
-     */
     @Transactional(readOnly = true)
     fun getTopicStatistics(topicId: Long): Map<ArgumentStance, Int> {
         val statistics = debateArgumentRepository.countByTopicIdGroupByStance(topicId)
@@ -179,9 +166,6 @@ class DebateArgumentService(
         }
     }
 
-    /**
-     * 10. 지지 토글
-     */
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun toggleSupport(id: Long, increase: Boolean): Boolean {
         val result = if (increase) {
@@ -192,9 +176,6 @@ class DebateArgumentService(
         return result > 0
     }
 
-    /**
-     * 11. 반대 토글
-     */
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun toggleOppose(id: Long, increase: Boolean): Boolean {
         val result = if (increase) {
@@ -205,9 +186,6 @@ class DebateArgumentService(
         return result > 0
     }
 
-    /**
-     * 12. 토픽의 전체 논증 목록 (입장 구분 없이)
-     */
     @Transactional(readOnly = true)
     fun getAllArgumentsByTopic(topicId: Long, pageNo: Int, limit: Int): DebateArgumentListResponse {
         val totalCount = debateArgumentRepository.countByTopicIdAndActiveYnTrue(topicId)

@@ -15,6 +15,17 @@ class JBConstants {
 
         const val AmazonS3PublicUrl = "https://%s.s3.%s.amazonaws.com/%s"
 
+        const val DEBATE_ARGUMENT_MAX_CONTENT_LENGTH = 5000
+        const val DEBATE_HOT_TOPIC_THRESHOLD = 100
+        const val DEBATE_HOT_TOPIC_VIEW_COUNT_DIVISOR = 10
+        const val DEBATE_TOP_ARGUMENTS_LIMIT = 3
+        const val DEBATE_POPULAR_ARGUMENTS_LIMIT = 5
+        const val DEBATE_RECENT_WEEKS = 7
+        const val DEBATE_DASHBOARD_TOPICS_LIMIT = 5
+        const val DEBATE_DEFAULT_HOT_TOPICS_LIMIT = 10
+        const val DEBATE_DEFAULT_ENDING_SOON_LIMIT = 10
+        const val DEBATE_DEFAULT_POPULAR_REPLIES_LIMIT = 5
+
         val FORMATTER_YYYYMM = DateTimeFormatter.ofPattern("yyyyMM")
         val FORMATTER_YYYYMMDD = DateTimeFormatter.ofPattern("yyyy-MM-dd")
         val FORMATTER_YYYYMMDD2 = DateTimeFormatter.ofPattern("yyyyMMdd")

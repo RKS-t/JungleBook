@@ -8,9 +8,9 @@ enum class DefaultErrorCode(
     val title: String,
     val description: String
 ) {
-    EMAIL_ALREADY_EXIST(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "회원가입 실패", "이메일이 이미 존재합니다."),
+    EMAIL_ALREADY_EXIST(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "이메일 중복", "이메일이 이미 존재합니다."),
     LOGIN_FAILURE(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "로그인 실패", "잘못된 로그인 아이디 또는 비밀번호입니다."),
-    DELETED_MEMBER(HttpStatus.NOT_FOUND, HttpStatus.NOT_FOUND.value().toString(), "삭제 회원", "삭제된 회원입니다."),
+    DELETED_MEMBER(HttpStatus.NOT_FOUND, HttpStatus.NOT_FOUND.value().toString(), "삭제된 회원", "삭제된 회원입니다."),
     INCORRECT_PASSWORDD(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "잘못된 비밀번호", "비밀번호를 잘못 입력하였습니다."),
 
     ALREADY_EXISTS(HttpStatus.CONFLICT, HttpStatus.CONFLICT.value().toString(), "중복 요청", "이미 처리된 요청입니다."),
@@ -22,8 +22,8 @@ enum class DefaultErrorCode(
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, HttpStatus.NOT_FOUND.value().toString(), "사용자 없음", "사용자를 찾을 수 없습니다."),
     SYSTEM_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.value().toString(), "시스템 오류", "시스템 오류가 발생했습니다."),
 
-    LOGIN_ID_ALREADY_EXIST(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "회원가입 실패", "로그인 ID가 이미 존재합니다."),
-    NICKNAME_ALREADY_EXIST(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "회원가입 실패", "닉네임이 이미 존재합니다."),
+    LOGIN_ID_ALREADY_EXIST(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "로그인 ID 중복", "로그인 ID가 이미 존재합니다."),
+    NICKNAME_ALREADY_EXIST(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "닉네임 중복", "닉네임이 이미 존재합니다."),
     PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "비밀번호 불일치", "새 비밀번호가 일치하지 않습니다."),
 
     SOCIAL_LOGIN_FAILURE(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "소셜 로그인 실패", "소셜 로그인 처리 중 오류가 발생했습니다."),

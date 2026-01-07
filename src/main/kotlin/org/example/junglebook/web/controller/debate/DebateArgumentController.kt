@@ -27,7 +27,7 @@ class DebateArgumentController(
     fun getPopularArguments(
         @PathVariable topicId: Long
     ): ResponseEntity<Map<ArgumentStance, List<DebateArgumentSimpleResponse>>> {
-        val popularArguments = debateArgumentService.popularList(topicId)
+        val popularArguments = debateArgumentService.getPopularList(topicId)
         return ResponseEntity.ok(popularArguments)
     }
 
@@ -39,7 +39,7 @@ class DebateArgumentController(
         @RequestParam(defaultValue = "0") pageNo: Int,
         @RequestParam(defaultValue = "20") limit: Int
     ): ResponseEntity<DebateArgumentListResponse> {
-        val argumentList = debateArgumentService.pageableList(topicId, stance, pageNo, limit)
+        val argumentList = debateArgumentService.getPageableList(topicId, stance, pageNo, limit)
         return ResponseEntity.ok(argumentList)
     }
 
@@ -47,12 +47,11 @@ class DebateArgumentController(
     @GetMapping("/{argumentId}")
     fun getArgumentDetail(
         @PathVariable topicId: Long,
-        @PathVariable argumentId: Long
+        @PathVariable argumentId: Long,
+        @RequestParam(defaultValue = "true") increaseView: Boolean
     ): ResponseEntity<DebateArgumentResponse> {
-        val argument = debateArgumentService.view(topicId, argumentId)
+        val argument = debateArgumentService.getArgument(topicId, argumentId, increaseView)
             ?: return ResponseEntity.notFound().build()
-        
-        debateArgumentService.increaseViewCount(argumentId)
         return ResponseEntity.ok(argument)
     }
 
@@ -78,13 +77,8 @@ class DebateArgumentController(
         @PathVariable argumentId: Long
     ): ResponseEntity<Void> {
         val memberId = getMemberId(member)
-        val deleted = debateArgumentService.deleteArgument(topicId, argumentId, memberId)
-        
-        return if (deleted) {
-            ResponseEntity.noContent().build()
-        } else {
-            ResponseEntity.notFound().build()
-        }
+        debateArgumentService.deleteArgument(topicId, argumentId, memberId)
+        return ResponseEntity.noContent().build()
     }
 
     @Operation(summary = "작성자별 논증 조회")
@@ -140,9 +134,9 @@ class DebateArgumentController(
 
     private fun getMemberId(member: Member): Long {
         val memberEntity = memberService.findActivateMemberByLoginId(member.loginId)
-        return memberEntity.id ?: throw org.example.junglebook.exception.GlobalException(
-            org.example.junglebook.exception.DefaultErrorCode.USER_NOT_FOUND
-        )
+        return requireNotNull(memberEntity.id) {
+            "Member ID must not be null"
+        }
     }
 }
 

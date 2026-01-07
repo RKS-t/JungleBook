@@ -10,7 +10,6 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 
 @Configuration
 class RedisConfig(
-    // 생성자 주입을 통해 프로퍼티를 안전하게 받습니다.
     @Value("\${spring.data.redis.host}") private val host: String,
     @Value("\${spring.data.redis.port}") private val port: Int
 ) {

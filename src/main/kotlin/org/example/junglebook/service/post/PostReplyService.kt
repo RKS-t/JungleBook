@@ -30,10 +30,14 @@ class PostReplyService(
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
-    fun create(entity: PostReplyEntity, fileIds: List<Long>?) {
+    fun create(postId: Long, request: org.example.junglebook.web.dto.PostReplyCreateRequest, userId: Long, authorNickname: String): PostReplyEntity {
+        val post = postRepository.findByIdAndUseYnTrue(postId)
+            ?: throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "게시글을 찾을 수 없습니다.")
+        
+        val entity = request.toEntity(post.boardId, postId, userId, authorNickname)
         val savedEntity = postReplyRepository.save(entity)
 
-        fileIds?.forEach { fileId ->
+        request.fileIds?.forEach { fileId ->
             postFileRepository.updateAttachStatus(
                 refType = PostReferenceType.REPLY.ordinal,
                 refId = savedEntity.id,
@@ -42,18 +46,30 @@ class PostReplyService(
             )
         }
 
-        postRepository.increaseReplyCount(entity.postId)
+        postRepository.increaseReplyCount(postId)
+        return savedEntity
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
-    fun modify(entity: PostReplyEntity, fileIds: List<Long>?): Boolean {
-        val replyCount = postReplyRepository.countByParentIdAndUseYnTrue(entity.id!!)
-
+    fun modify(postId: Long, replyId: Long, request: org.example.junglebook.web.dto.PostReplyUpdateRequest, userId: Long, authorNickname: String): PostReplyEntity {
+        val reply = postReplyRepository.findByIdAndUseYnTrue(replyId)
+            ?: throw GlobalException(DefaultErrorCode.REPLY_NOT_FOUND)
+        
+        if (reply.userId != userId) {
+            throw GlobalException(DefaultErrorCode.FORBIDDEN)
+        }
+        
+        val replyCount = postReplyRepository.countByParentIdAndUseYnTrue(replyId)
         if (replyCount > 0) {
             throw GlobalException(DefaultErrorCode.REPLY_EXISTS)
         }
 
-        fileIds?.forEach { fileId ->
+        val post = postRepository.findByIdAndUseYnTrue(postId)
+            ?: throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "게시글을 찾을 수 없습니다.")
+        
+        val entity = request.toEntity(post.boardId, postId, replyId, userId, authorNickname)
+        
+        request.fileIds?.forEach { fileId ->
             postFileRepository.updateAttachStatus(
                 refType = PostReferenceType.REPLY.ordinal,
                 refId = entity.id,
@@ -62,23 +78,20 @@ class PostReplyService(
             )
         }
 
-        return try {
-            postReplyRepository.save(entity)
-            true
-        } catch (e: Exception) {
-            false
-        }
+        return postReplyRepository.save(entity)
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
-    fun remove(userId: Long, boardId: Int, postId: Long, id: Long): Boolean {
-        val replyCount = postReplyRepository.countByParentIdAndUseYnTrue(id)
+    fun remove(postId: Long, replyId: Long, userId: Long) {
+        val replyCount = postReplyRepository.countByParentIdAndUseYnTrue(replyId)
 
         if (replyCount > 0) {
             throw GlobalException(DefaultErrorCode.REPLY_EXISTS)
         }
 
-        val reply = postReplyRepository.findByIdAndUseYnTrue(id) ?: return false
+        val reply = postReplyRepository.findByIdAndUseYnTrue(replyId)
+            ?: throw GlobalException(DefaultErrorCode.REPLY_NOT_FOUND)
+        
         if (reply.userId != userId) {
             throw GlobalException(DefaultErrorCode.FORBIDDEN)
         }
@@ -86,14 +99,14 @@ class PostReplyService(
         reply.softDelete()
         postReplyRepository.save(reply)
         postRepository.increaseReplyCount(postId)
-        
-        return true
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
-    fun increaseCount(boardId: Int, postId: Long, id: Long, userId: Long, countType: CountType): Int {
+    fun increaseCount(postId: Long, replyId: Long, userId: Long, countType: CountType): Int {
+        val post = postRepository.findByIdAndUseYnTrue(postId)
+            ?: throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "게시글을 찾을 수 없습니다.")
         val existCount = postCountHistoryRepository.countByRefTypeAndRefIdAndUserId(
-            PostReferenceType.REPLY, id, userId
+            PostReferenceType.REPLY, replyId, userId
         )
 
         if (existCount > 0) {
@@ -101,7 +114,7 @@ class PostReplyService(
         }
 
         val updateResult = when (countType) {
-            CountType.LIKE -> postReplyRepository.increaseLikeCount(id)
+            CountType.LIKE -> postReplyRepository.increaseLikeCount(replyId)
             CountType.DISLIKE -> {
                 // 싫어요는 PostLikeEntity로 관리하지 않으므로 별도 처리 필요
                 throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "싫어요 기능은 PostLikeEntity로 관리되지 않습니다.")
@@ -113,14 +126,13 @@ class PostReplyService(
             // 히스토리 저장
             val history = PostCountHistoryEntity(
                 refType = PostReferenceType.REPLY,
-                refId = id,
+                refId = replyId,
                 userId = userId,
                 type = countType
             )
             postCountHistoryRepository.save(history)
 
-            // 업데이트된 카운트 반환
-            val updatedReply = postReplyRepository.findById(id)
+            val updatedReply = postReplyRepository.findById(replyId)
                 .orElseThrow { GlobalException(DefaultErrorCode.REPLY_NOT_FOUND) }
 
             return when (countType) {

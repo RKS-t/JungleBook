@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS post (
     notice_yn BOOLEAN NOT NULL DEFAULT FALSE,
     use_yn BOOLEAN NOT NULL DEFAULT TRUE,
     file_yn BOOLEAN NOT NULL DEFAULT FALSE,
-    nickname VARCHAR(50),
+    author_nickname VARCHAR(50),
     title VARCHAR(200) NOT NULL,
     content TEXT NOT NULL,
     content_html TEXT,
@@ -103,9 +103,10 @@ CREATE TABLE IF NOT EXISTS post_reply (
     post_id BIGINT NOT NULL,
     pid BIGINT,
     user_id BIGINT,
+    depth INT NOT NULL DEFAULT 0,
     use_yn BOOLEAN NOT NULL DEFAULT TRUE,
     file_yn BOOLEAN NOT NULL DEFAULT FALSE,
-    nickname VARCHAR(50),
+    author_nickname VARCHAR(50),
     content TEXT NOT NULL,
     content_html TEXT,
     like_cnt INT NOT NULL DEFAULT 0,
@@ -121,7 +122,8 @@ CREATE TABLE IF NOT EXISTS post_reply (
     INDEX idx_pid (pid),
     INDEX idx_user_id (user_id),
     INDEX idx_use_yn (use_yn),
-    INDEX idx_created_dt (created_dt)
+    INDEX idx_created_dt (created_dt),
+    INDEX idx_depth (depth)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 게시글 파일 테이블
@@ -135,11 +137,31 @@ CREATE TABLE IF NOT EXISTS post_file (
     file_size VARCHAR(20),
     file_name VARCHAR(255),
     url VARCHAR(500),
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
     
     FOREIGN KEY (user_id) REFERENCES member(id) ON DELETE SET NULL,
     INDEX idx_ref_type_ref_id (ref_type, ref_id),
     INDEX idx_user_id (user_id),
     INDEX idx_attach_yn (attach_yn)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 게시글 좋아요 테이블
+CREATE TABLE IF NOT EXISTS post_like (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    member_id BIGINT NOT NULL,
+    post_id BIGINT,
+    reply_id BIGINT,
+    created_at DATETIME NOT NULL,
+    
+    FOREIGN KEY (member_id) REFERENCES member(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES post(id) ON DELETE CASCADE,
+    FOREIGN KEY (reply_id) REFERENCES post_reply(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_like_member_post (member_id, post_id),
+    UNIQUE KEY uk_like_member_reply (member_id, reply_id),
+    INDEX idx_member_id (member_id),
+    INDEX idx_post_id (post_id),
+    INDEX idx_reply_id (reply_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 게시글 카운트 히스토리 테이블
@@ -208,6 +230,11 @@ CREATE TABLE IF NOT EXISTS debate_argument (
     support_count INT NOT NULL DEFAULT 0,
     oppose_count INT NOT NULL DEFAULT 0,
     reply_count INT NOT NULL DEFAULT 0,
+    fallacy_has_fallacy BOOLEAN,
+    fallacy_type VARCHAR(50),
+    fallacy_confidence DOUBLE,
+    fallacy_explanation TEXT,
+    fallacy_checked_yn BOOLEAN NOT NULL DEFAULT FALSE,
     created_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL,
     
@@ -286,6 +313,38 @@ CREATE TABLE IF NOT EXISTS debate_file (
     INDEX idx_uploader_id (uploader_id),
     INDEX idx_active_yn (active_yn),
     INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 논리 오류 학습 데이터 테이블
+CREATE TABLE IF NOT EXISTS debate_argument_fallacy_training_data (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    argument_id BIGINT,
+    text TEXT NOT NULL,
+    label VARCHAR(50) NOT NULL,
+    source VARCHAR(50) NOT NULL,
+    used_for_training BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME NOT NULL,
+    
+    FOREIGN KEY (argument_id) REFERENCES debate_argument(id) ON DELETE SET NULL,
+    INDEX idx_used_training (used_for_training),
+    INDEX idx_label (label)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 논리 오류 이의제기 테이블
+CREATE TABLE IF NOT EXISTS debate_argument_fallacy_appeal (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    argument_id BIGINT NOT NULL,
+    appealer_id BIGINT NOT NULL,
+    appeal_reason TEXT NOT NULL,
+    ai_original_judgment TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    
+    FOREIGN KEY (argument_id) REFERENCES debate_argument(id) ON DELETE CASCADE,
+    FOREIGN KEY (appealer_id) REFERENCES member(id) ON DELETE CASCADE,
+    INDEX idx_argument_created (argument_id, created_at),
+    INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================================

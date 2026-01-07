@@ -11,8 +11,8 @@ JungleBook 프로젝트에 논리 오류 탐지 시스템이 통합되었습니�
 - 재학습 데이터 수집 및 트리거
 
 ### 2. Python FastAPI 서비스
-- 논리 오류 탐지 모델 실행
-- 한국어 → 영어 번역 (OpenAI API)
+- 논리 오류 탐지 모델 실행 (한국어 KoELECTRA 기반)
+- 영어 입력 시 선택적으로 한국어 번역 후 분석 (Google AI 또는 OpenAI)
 - 모델 재학습
 
 ## 설치 및 실행
@@ -28,7 +28,16 @@ pip install -r requirements.txt
 2. **환경 변수 설정**
 ```bash
 cp .env.example .env
-# .env 파일을 수정하여 OpenAI API 키 설정
+# .env 파일을 수정하여 AI API 키 및 모델 설정
+# 예시 (Google AI 사용)
+AI_PROVIDER=google
+GOOGLE_AI_API_KEY=your_google_ai_api_key_here
+GOOGLE_AI_MODEL=gemini-2.0-flash
+TRANSLATION_ENABLED=true
+# 예시 (OpenAI 사용)
+# AI_PROVIDER=openai
+# OPENAI_API_KEY=your_openai_api_key_here
+# OPENAI_MODEL=gpt-4o-mini
 ```
 
 3. **서비스 실행**
@@ -52,7 +61,7 @@ fallacy:
     appeal:
       threshold: 100
     translation:
-      enabled: true
+      enabled: true  # 영어 입력 시 번역 후 분석
 ```
 
 ## API 엔드포인트
@@ -125,9 +134,10 @@ fallacy:
    - FastAPI, PyTorch, Transformers 등이 필요합니다
    - `pip install -r requirements.txt`로 설치하세요
 
-2. **OpenAI API 키**
-   - 번역 기능을 사용하려면 OpenAI API 키가 필요합니다
-   - `.env` 파일에 설정하세요
+2. **AI 번역 API 키**
+   - 영어 입력을 번역하려면 Google AI 또는 OpenAI 키가 필요합니다
+   - Google 권장 모델: `gemini-2.0-flash` (generateContent 지원)
+   - `.env` 파일에 `AI_PROVIDER`, `GOOGLE_AI_API_KEY` 또는 `OPENAI_API_KEY`를 설정하세요
 
 3. **모델 초기 학습**
    - 처음 실행 시 모델이 없으면 폴백 모드로 동작합니다
@@ -140,7 +150,7 @@ fallacy:
 ## 다음 단계
 
 1. Python 서비스 의존성 설치 및 모델 초기 학습
-2. 실제 논리 오류 탐지 테스트
+2. 영어 입력 시 번역 활성화 후 실제 논리 오류 탐지 테스트 (한국어 입력은 직접 분석)
 3. 재학습 파이프라인 완성도 향상
-4. 번역 품질 개선
+4. 영어 학습 데이터 추가 학습 또는 영어 전용 모델 검토 (현재 영어 입력 신뢰도 낮음)
 

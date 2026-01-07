@@ -25,8 +25,8 @@ data class PostEntity(
     @Column(name = "seq_no")
     val seqNo: Long? = null,
 
-    @Column(name = "user_id", nullable = false)
-    val userId: Long,
+    @Column(name = "user_id")
+    val userId: Long?,
 
     @Column(name = "notice_yn")
     var noticeYn: Boolean = false,

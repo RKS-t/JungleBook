@@ -26,16 +26,23 @@ class MemberService(
     private val memberCampHistoryRepository: MemberCampHistoryRepository
 ): UserDetailsService {
     @Throws(UsernameNotFoundException::class)
-    override fun loadUserByUsername(loginId: String): UserDetails =
-        Member.from(findActivateMemberByLoginId(loginId))
+    override fun loadUserByUsername(loginId: String): UserDetails {
+        return try {
+            Member.from(findActivateMemberByLoginId(loginId))
+        } catch (e: GlobalException) {
+            // Spring Security가 처리할 수 있도록 UsernameNotFoundException으로 변환
+            throw UsernameNotFoundException(e.code.description, e)
+        }
+    }
 
-    fun myInfoByLoginId(loginId: String) = memberRepository.findByLoginId(loginId)
+    fun existsByLoginId(loginId: String): Boolean = memberRepository.findByLoginId(loginId) != null
 
     @Transactional(readOnly = true)
     fun myInfoById(id: Long): MemberDetailResponse {
         val member = findActivateMemberById(id)
+        val memberId = member.id ?: throw GlobalException(DefaultErrorCode.SYSTEM_ERROR)
         return MemberDetailResponse(
-            id = member.id!!,
+            id = memberId,
             loginId = member.loginId,
             name = member.name,
             email = member.email,
@@ -52,23 +59,36 @@ class MemberService(
     }
     @Transactional
     fun signUp(request: SignUpRequest) {
-        val member = memberRepository.findFirstByEmail(request.email)
-        if (member != null) {
-            throw GlobalException(DefaultErrorCode.EMAIL_ALREADY_EXIST)
-        }
+        validateSignUpRequest(request)
         val memberEntity = request.toMemberEntity()
         memberRepository.save(memberEntity)
     }
 
+    fun validateSignUpRequest(request: SignUpRequest) {
+        if (findByEmail(request.email) != null) {
+            throw GlobalException(DefaultErrorCode.EMAIL_ALREADY_EXIST)
+        }
+
+        if (findByNickname(request.nickname) != null) {
+            throw GlobalException(DefaultErrorCode.NICKNAME_ALREADY_EXIST)
+        }
+
+        if (existsByLoginId(request.loginId)) {
+            throw GlobalException(DefaultErrorCode.LOGIN_ID_ALREADY_EXIST)
+        }
+    }
+
     fun findActivateMemberByLoginId(loginId: String): MemberEntity =
         memberRepository.findByLoginId(loginId)?.let { member ->
-            if (member.deleteYn.toBoolean()) throw InternalAuthenticationServiceException(DefaultErrorCode.DELETED_MEMBER.description)
+            if (member.deleteYn.toBoolean()) throw GlobalException(DefaultErrorCode.DELETED_MEMBER)
             member
-        } ?: throw InternalAuthenticationServiceException(DefaultErrorCode.LOGIN_FAILURE.description)
+        } ?: throw GlobalException(DefaultErrorCode.LOGIN_FAILURE)
 
     fun findActivateMemberById(id: Long): MemberEntity =
-        memberRepository.findById(id).orElseThrow { IllegalArgumentException() } .let { member ->
-            if (member.deleteYn.toBoolean()) throw InternalAuthenticationServiceException(DefaultErrorCode.DELETED_MEMBER.description)
+        memberRepository.findById(id).orElseThrow { 
+            GlobalException(DefaultErrorCode.MEMBER_NOT_FOUND)
+        }.let { member ->
+            if (member.deleteYn.toBoolean()) throw GlobalException(DefaultErrorCode.DELETED_MEMBER)
             member
         }
 
@@ -82,10 +102,11 @@ class MemberService(
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun loginTest(loginId: String): MemberEntity {
-        val memberEntity = memberRepository.findByLoginId(loginId)
-            ?: throw GlobalException(DefaultErrorCode.USER_NOT_FOUND)
+        val memberEntity = memberRepository.findByLoginId(loginId) 
+            ?: throw GlobalException(DefaultErrorCode.MEMBER_NOT_FOUND)
 
-        memberRepository.updateLoginTime(memberEntity.id!!)
+        val memberId = memberEntity.id ?: throw GlobalException(DefaultErrorCode.SYSTEM_ERROR)
+        memberRepository.updateLoginTime(memberId)
         return memberEntity
     }
 
@@ -93,12 +114,10 @@ class MemberService(
     fun changeIdeology(userId: Long, ideology: Ideology) {
         val memberEntity = findActivateMemberById(userId)
 
-        // 현재 이데올로지와 변경하려는 이데올로지가 동일한지 확인
         if (memberEntity.ideology == ideology) {
             throw GlobalException(DefaultErrorCode.SAME_IDEOLOGY)
         }
 
-        // 6개월 제한 체크
         val latestHistories = memberCampHistoryRepository.findLatestByMemberId(userId)
         val now = LocalDateTime.now()
         latestHistories.firstOrNull()?.let { history ->
@@ -107,27 +126,20 @@ class MemberService(
             }
         }
 
-        // 회원 정보 업데이트
         memberEntity.ideology = ideology
         memberEntity.updatedAt = now
         memberRepository.save(memberEntity)
 
-        // 이데올로지 변경 히스토리 저장 (camp 필드를 ideology 값으로 매핑)
         val ideologyHistory = MemberCampHistoryEntity(
             memberId = userId,
-            camp = ideology.ordinal // C=0, L=1, M=2, N=3
+            camp = ideology.ordinal
         )
         memberCampHistoryRepository.save(ideologyHistory)
     }
 
-    // 편의 메서드들
-    fun findByEmail(email: String): MemberEntity? {
-        return memberRepository.findByEmail(email)
-    }
+    fun findByEmail(email: String): MemberEntity? = memberRepository.findByEmail(email)
 
-    fun findByNickname(nickname: String): MemberEntity? {
-        return memberRepository.findByNickname(nickname)
-    }
+    fun findByNickname(nickname: String): MemberEntity? = memberRepository.findByNickname(nickname)
 
     @Transactional
     fun updateMember(member: MemberEntity) {

@@ -36,19 +36,43 @@ def prepare_korean_training_data():
         if i % 100 == 0:
             print(f"   진행 중: {i}/{sample_size} ({i*100//sample_size}%)")
         
-        english_text = item.get("text", item.get("argument", ""))
-        label = item.get("label", item.get("logical_fallacy", "no_fallacy"))
+        # 원본 데이터셋 구조에 맞게 수정
+        # tasksource/logical-fallacy 데이터셋은 logical_fallacies 키 사용
+        if "logical_fallacies" in item:
+            # 논리 오류 타입 추출
+            fallacies = item["logical_fallacies"]
+            if isinstance(fallacies, list) and len(fallacies) > 0:
+                label = fallacies[0]  # 첫 번째 논리 오류 타입 사용
+            elif isinstance(fallacies, str) and fallacies.strip():
+                label = fallacies.strip()
+            else:
+                label = "no_fallacy"
+            
+            # 텍스트 추출 (source_article 사용)
+            english_text = item.get("source_article", "")
+            if not english_text:
+                english_text = item.get("text", item.get("argument", ""))
+        else:
+            # 기존 구조 지원
+            english_text = item.get("text", item.get("argument", ""))
+            label = item.get("label", item.get("logical_fallacy", "no_fallacy"))
         
-        # 한국어로 번역
+        # 텍스트가 비어있으면 건너뛰기
+        if not english_text or not english_text.strip():
+            continue
+        
+        # 한국어로 번역 (실제 번역 결과만 사용)
         korean_text = translator.translate_to_korean(english_text, "en")
         
-        if korean_text:
+        # 번역 결과가 실제 번역인지 확인 (프롬프트 응답이 아닌지)
+        if korean_text and len(korean_text) > 20 and "Please provide" not in korean_text and "번역" not in korean_text[:50]:
             translated_data.append({
                 "text": korean_text,
                 "label": label
             })
         else:
-            print(f"   ⚠️  번역 실패: 샘플 {i} 건너뜀")
+            if i < 5:  # 처음 몇 개만 경고 출력
+                print(f"   ⚠️  번역 실패 또는 프롬프트 응답: 샘플 {i} 건너뜀")
     
     print(f"✅ 번역 완료: {len(translated_data)}개 샘플")
     

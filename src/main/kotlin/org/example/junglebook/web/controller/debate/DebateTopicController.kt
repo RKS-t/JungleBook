@@ -1,7 +1,6 @@
 package org.example.junglebook.web.controller.debate
 
 import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.example.junglebook.enums.DebateTopicCategory
 import org.example.junglebook.enums.DebateTopicStatus
@@ -125,12 +124,8 @@ class DebateTopicController(
         @PathVariable topicId: Long
     ): ResponseEntity<Void> {
         val memberId = getMemberId(member)
-        val deleted = debateTopicService.deleteTopic(topicId, memberId)
-        return if (deleted) {
-            ResponseEntity.noContent().build()
-        } else {
-            ResponseEntity.notFound().build()
-        }
+        debateTopicService.deleteTopic(topicId, memberId)
+        return ResponseEntity.noContent().build()
     }
 
     @Operation(summary = "토픽 상태 변경")
@@ -165,9 +160,9 @@ class DebateTopicController(
 
     private fun getMemberId(member: Member): Long {
         val memberEntity = memberService.findActivateMemberByLoginId(member.loginId)
-        return memberEntity.id ?: throw org.example.junglebook.exception.GlobalException(
-            org.example.junglebook.exception.DefaultErrorCode.USER_NOT_FOUND
-        )
+        return requireNotNull(memberEntity.id) {
+            "Member ID must not be null"
+        }
     }
 }
 
