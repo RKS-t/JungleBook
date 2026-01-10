@@ -13,7 +13,9 @@ import org.example.junglebook.web.dto.TokenDto
 import org.example.junglebook.model.Member
 import org.example.junglebook.properties.JwtTokenProperties
 import org.example.junglebook.service.JwtService
+import org.example.junglebook.service.KakaoOAuthService
 import org.example.junglebook.service.MemberService
+import org.example.junglebook.service.NaverOAuthService
 import org.example.junglebook.service.SocialMemberService
 import org.example.junglebook.web.dto.DuplicateCheckResponse
 import org.example.junglebook.web.dto.LoginResponse
@@ -52,7 +54,9 @@ class MemberController(
     private val authenticationManager: AuthenticationManager,
     private val memberService: MemberService,
     private val passwordEncoder: PasswordEncoder,
-    private val socialMemberService: SocialMemberService
+    private val socialMemberService: SocialMemberService,
+    private val kakaoOAuthService: KakaoOAuthService,
+    private val naverOAuthService: NaverOAuthService
 ) {
 
     @ApiOperation("로그인")
@@ -270,22 +274,10 @@ class MemberController(
     }
 
     private fun getKakaoUserInfo(accessToken: String): SocialUserInfo {
-        return SocialUserInfo(
-            id = "kakao_${System.currentTimeMillis()}",
-            name = "카카오사용자",
-            email = "kakao@example.com",
-            nickname = "카카오사용자",
-            profileImage = "https://via.placeholder.com/100"
-        )
+        return kakaoOAuthService.getUserInfo(accessToken)
     }
 
     private fun getNaverUserInfo(accessToken: String): SocialUserInfo {
-        return SocialUserInfo(
-            id = "naver_${System.currentTimeMillis()}",
-            name = "네이버사용자",
-            email = "naver@example.com",
-            nickname = "네이버사용자",
-            profileImage = "https://via.placeholder.com/100"
-        )
+        return naverOAuthService.getUserInfo(accessToken)
     }
 }
