@@ -12,6 +12,21 @@
 - [createPost - Flowchart](post/PostController/createPost-flowchart.md)
 - [createPost - Redis Type Map](post/PostController/createPost-redis-typemap.md)
 - [createPost - Database ERD](post/PostController/createPost-database-erd.md)
+- [getPostDetail - Class Diagram](post/PostController/getPostDetail-class-diagram.md)
+- [getPostDetail - Sequence Diagram](post/PostController/getPostDetail-sequence.md)
+- [getPostDetail - Flowchart](post/PostController/getPostDetail-flowchart.md)
+- [getPostDetail - Redis Type Map](post/PostController/getPostDetail-redis-typemap.md)
+- [getPostDetail - Database ERD](post/PostController/getPostDetail-database-erd.md)
+- [getPostList - Class Diagram](post/PostController/getPostList-class-diagram.md)
+- [getPostList - Sequence Diagram](post/PostController/getPostList-sequence.md)
+- [getPostList - Flowchart](post/PostController/getPostList-flowchart.md)
+- [getPostList - Redis Type Map](post/PostController/getPostList-redis-typemap.md)
+- [getPostList - Database ERD](post/PostController/getPostList-database-erd.md)
+- [getPostsByAuthor - Class Diagram](post/PostController/getPostsByAuthor-class-diagram.md)
+- [getPostsByAuthor - Sequence Diagram](post/PostController/getPostsByAuthor-sequence.md)
+- [getPostsByAuthor - Flowchart](post/PostController/getPostsByAuthor-flowchart.md)
+- [getPostsByAuthor - Redis Type Map](post/PostController/getPostsByAuthor-redis-typemap.md)
+- [getPostsByAuthor - Database ERD](post/PostController/getPostsByAuthor-database-erd.md)
 
 ### Member APIs (회원 API)
 
@@ -61,4 +76,8 @@
   - GlobalExceptionHandler 명시적 추가
   - 불필요한 중복 제거 (토큰 생성 단계 통합)
   - 구현 세부사항 명시 (BCryptPasswordEncoder, JwtAuthenticationFilter 등)
+- 2025-01-10: Post API 차트 추가
+  - PostController.getPostDetail 차트 생성 (파일 조회 기능 반영)
+  - PostController.getPostList 차트 생성 (조회수순/좋아요순 정렬 반영)
+  - PostController.getPostsByAuthor 차트 생성 (작성자별 개수 조회 반영)
 
