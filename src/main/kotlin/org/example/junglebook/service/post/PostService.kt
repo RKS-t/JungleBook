@@ -148,7 +148,8 @@ class PostService(
             postRepository.increaseViewCount(postId)
         }
         
-        val files = emptyList<PostFileResponse>() // TODO: 파일 조회 구현
+        val fileEntities = postFileRepository.findByRefTypeAndRefId(PostReferenceType.POST.value, postId)
+        val files = fileEntities.map { PostFileResponse.of(it) }
         
         return PostDetailResponse(
             post = PostResponse.of(post),
@@ -178,12 +179,10 @@ class PostService(
                 postRepository.findPopularByBoardId(boardId, pageable)
             }
             PostSortType.MOST_VIEWED -> {
-                // TODO: 조회수순 구현
-                postRepository.findByBoardIdAndUseYnTrueOrderByNoticeYnDescCreatedDtDesc(boardId, pageable)
+                postRepository.findByBoardIdAndUseYnTrueOrderByViewCntDesc(boardId, pageable)
             }
             PostSortType.MOST_LIKED -> {
-                // TODO: 좋아요순 구현
-                postRepository.findByBoardIdAndUseYnTrueOrderByNoticeYnDescCreatedDtDesc(boardId, pageable)
+                postRepository.findByBoardIdAndUseYnTrueOrderByLikeCntDesc(boardId, pageable)
             }
         }
         
@@ -203,7 +202,7 @@ class PostService(
     fun getPostsByAuthor(userId: Long, pageNo: Int, limit: Int): PostListResponse {
         val pageable = PageRequest.of(pageNo, limit)
         val posts = postRepository.findByUserIdAndUseYnTrueOrderByCreatedDtDesc(userId, pageable)
-        val totalCount = postRepository.countByBoardIdAndUseYnTrue(0).toInt() // TODO: 작성자별 개수 조회 구현
+        val totalCount = postRepository.countByUserIdAndUseYnTrue(userId).toInt()
         
         return PostListResponse.of(totalCount, pageNo, posts)
     }
