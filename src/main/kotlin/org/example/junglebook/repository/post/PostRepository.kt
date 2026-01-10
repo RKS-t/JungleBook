@@ -106,6 +106,29 @@ interface PostRepository : JpaRepository<PostEntity, Long> {
 
     fun countByBoardIdAndUseYnTrue(boardId: Int): Long
 
+    @Query("SELECT COUNT(p) FROM PostEntity p WHERE p.userId = :userId AND p.useYn = true")
+    fun countByUserIdAndUseYnTrue(@Param("userId") userId: Long): Long
+
+    @Query("""
+        SELECT p FROM PostEntity p 
+        WHERE p.boardId = :boardId AND p.useYn = true 
+        ORDER BY p.noticeYn DESC, p.viewCnt DESC, p.createdDt DESC
+    """)
+    fun findByBoardIdAndUseYnTrueOrderByViewCntDesc(
+        @Param("boardId") boardId: Int,
+        pageable: Pageable
+    ): List<PostEntity>
+
+    @Query("""
+        SELECT p FROM PostEntity p 
+        WHERE p.boardId = :boardId AND p.useYn = true 
+        ORDER BY p.noticeYn DESC, p.likeCnt DESC, p.createdDt DESC
+    """)
+    fun findByBoardIdAndUseYnTrueOrderByLikeCntDesc(
+        @Param("boardId") boardId: Int,
+        pageable: Pageable
+    ): List<PostEntity>
+
     @Modifying
     @Query("UPDATE PostEntity p SET p.viewCnt = p.viewCnt + 1, p.updatedDt = CURRENT_TIMESTAMP " +
             "WHERE p.id = :id")
