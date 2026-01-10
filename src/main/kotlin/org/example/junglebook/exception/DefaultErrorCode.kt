@@ -34,6 +34,8 @@ enum class DefaultErrorCode(
 
     SOCIAL_MEMBER_PASSWORD_CHANGE_DENIED(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "비밀번호 변경 불가", "소셜 회원은 비밀번호를 변경할 수 없습니다."),
     CURRENT_PASSWORD_INCORRECT(HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value().toString(), "현재 비밀번호 오류", "현재 비밀번호가 일치하지 않습니다."),
+    INVALID_SOCIAL_TOKEN(HttpStatus.UNAUTHORIZED, HttpStatus.UNAUTHORIZED.value().toString(), "유효하지 않은 소셜 토큰", "소셜 로그인 토큰이 유효하지 않습니다."),
+    EXTERNAL_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.value().toString(), "외부 API 오류", "외부 API 호출 중 오류가 발생했습니다."),
 
     TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, HttpStatus.UNAUTHORIZED.value().toString(), "토큰 만료", "인증 토큰이 만료되었습니다."),
     TOKEN_INVALID(HttpStatus.UNAUTHORIZED, HttpStatus.UNAUTHORIZED.value().toString(), "유효하지 않은 토큰", "인증 토큰이 유효하지 않습니다."),
