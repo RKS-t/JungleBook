@@ -9,7 +9,11 @@ sequenceDiagram
     participant MemberService
     participant DebateArgumentService
     participant DebateArgumentRepository
+    participant DebateFileRepository
+    participant DebateTopicRepository
+    participant DebateTopicService
     participant FallacyDetectionService
+    participant TransactionTemplate
     participant GlobalExceptionHandler
     
     Client->>SecurityFilterChain: POST /api/debate/topics/:topicId/arguments
@@ -26,9 +30,23 @@ sequenceDiagram
     
     DebateArgumentController->>DebateArgumentService: createArgument(topicId, memberId, request)
     DebateArgumentService->>DebateArgumentService: Validate content length
+    alt Content length exceeded
+        DebateArgumentService->>GlobalExceptionHandler: Throw GlobalException(WRONG_ACCESS)
+        GlobalExceptionHandler-->>Client: 400 Bad Request
+    end
     DebateArgumentService->>DebateArgumentService: toEntity(topicId, userId)
     DebateArgumentService->>DebateArgumentRepository: save(DebateArgumentEntity)
     DebateArgumentRepository-->>DebateArgumentService: DebateArgumentEntity
+    
+    alt fileIds not empty
+        loop For each fileId
+            DebateArgumentService->>DebateFileRepository: updateAttachStatus(refType, refId, fileId, userId)
+        end
+    end
+    
+    DebateArgumentService->>DebateTopicService: increaseArgumentCount(topicId)
+    DebateArgumentService->>DebateTopicRepository: findByIdAndActiveYnTrue(topicId)
+    DebateTopicRepository-->>DebateArgumentService: DebateTopicEntity?
     
     Note over DebateArgumentService,FallacyDetectionService: Asynchronous fallacy detection with timeout
     DebateArgumentService->>FallacyDetectionService: detectFallacyAsync(content, topicTitle, topicDescription)
@@ -42,12 +60,12 @@ sequenceDiagram
     Note over DebateArgumentService: Async callback processing (non-blocking)
     DebateArgumentService->>DebateArgumentService: thenAccept { result -> ... }
     alt Fallacy detection success
-        DebateArgumentService->>DebateArgumentService: transactionTemplate.executeWithoutResult
-        DebateArgumentService->>DebateArgumentRepository: findById(argumentId)
-        DebateArgumentRepository-->>DebateArgumentService: DebateArgumentEntity
-        DebateArgumentService->>DebateArgumentService: Update fallacy fields
-        DebateArgumentService->>DebateArgumentRepository: save(entity)
-        DebateArgumentService->>DebateArgumentService: logger().info("Fallacy detection result saved")
+        DebateArgumentService->>TransactionTemplate: executeWithoutResult { ... }
+        TransactionTemplate->>DebateArgumentRepository: findById(argumentId)
+        DebateArgumentRepository-->>TransactionTemplate: Optional<DebateArgumentEntity>
+        TransactionTemplate->>TransactionTemplate: Update fallacy fields
+        TransactionTemplate->>DebateArgumentRepository: save(entity)
+        TransactionTemplate->>DebateArgumentService: logger().info("Fallacy detection result saved")
     else TimeoutException
         DebateArgumentService->>DebateArgumentService: logger().warn("Fallacy detection timeout")
     else Other exception

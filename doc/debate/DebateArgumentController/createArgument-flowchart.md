@@ -11,15 +11,20 @@ flowchart TD
     TokenValid -->|Yes| ExtractMember[Extract Member from Token]
     
     ExtractMember --> GetMemberId[Get Member ID from MemberService]
-    GetMemberId --> ValidateRequest[Validate DebateArgumentCreateRequest]
+    GetMemberId --> ValidateContent[Validate Content Length<br/><i>JBConstants.DEBATE_ARGUMENT_MAX_CONTENT_LENGTH</i>]
     
-    ValidateRequest --> RequestValid{Request Valid?}
-    RequestValid -->|No| GlobalExceptionHandler3[GlobalExceptionHandler<br/>Return 400]
-    RequestValid -->|Yes| CreateArgumentEntity[Create DebateArgumentEntity]
+    ValidateContent --> ContentValid{Content Length<br/>Valid?}
+    ContentValid -->|No| GlobalExceptionHandler3[GlobalExceptionHandler<br/>Return 400<br/>WRONG_ACCESS]
+    ContentValid -->|Yes| CreateArgumentEntity[Create DebateArgumentEntity<br/><i>request.toEntity(topicId, userId)</i>]
     
-    CreateArgumentEntity --> SaveArgument[Save Argument to Database<br/><i>DebateArgumentRepository</i>]
-    SaveArgument --> DetectFallacy[Detect Logical Fallacy Async<br/><i>FallacyDetectionService.detectFallacyAsync()<br/>with orTimeout()</i>]
-    DetectFallacy --> CreateResponse[Create DebateArgumentResponse<br/><i>Immediate return</i>]
+    CreateArgumentEntity --> SaveArgument[Save Argument to Database<br/><i>DebateArgumentRepository.save()</i>]
+    SaveArgument --> ProcessFiles{File IDs<br/>Exist?}
+    ProcessFiles -->|Yes| UpdateFiles[Update File Attach Status<br/><i>DebateFileRepository.updateAttachStatus()<br/>For each fileId</i>]
+    ProcessFiles -->|No| IncreaseTopicCount
+    UpdateFiles --> IncreaseTopicCount[Increase Topic Argument Count<br/><i>DebateTopicService.increaseArgumentCount()</i>]
+    IncreaseTopicCount --> GetTopic[Get Topic Entity<br/><i>DebateTopicRepository.findByIdAndActiveYnTrue()</i>]
+    GetTopic --> DetectFallacy[Detect Logical Fallacy Async<br/><i>FallacyDetectionService.detectFallacyAsync()<br/>with orTimeout()</i>]
+    DetectFallacy --> CreateResponse[Create DebateArgumentResponse<br/><i>DebateArgumentResponse.of()<br/>Immediate return</i>]
     CreateResponse --> Return201[Return 201 Created]
     
     DetectFallacy -.->|Async Callback| AsyncProcess[Async Callback Processing<br/>Non-blocking]

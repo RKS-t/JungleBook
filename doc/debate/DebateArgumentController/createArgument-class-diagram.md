@@ -10,7 +10,34 @@ classDiagram
     }
     
     class DebateArgumentService {
-        +createArgument(DebateArgumentEntity, List) DebateArgumentResponse
+        -DebateArgumentRepository debateArgumentRepository
+        -DebateFileRepository debateFileRepository
+        -DebateTopicRepository debateTopicRepository
+        -DebateTopicService debateTopicService
+        -FallacyDetectionService fallacyDetectionService
+        -TransactionTemplate transactionTemplate
+        +createArgument(Long, Long, DebateArgumentCreateRequest) DebateArgumentResponse
+    }
+    
+    class DebateFileRepository {
+        +updateAttachStatus(Int, Long, Long, Long) void
+    }
+    
+    class DebateTopicRepository {
+        +findByIdAndActiveYnTrue(Long) DebateTopicEntity?
+    }
+    
+    class DebateTopicService {
+        +increaseArgumentCount(Long) void
+    }
+    
+    class FallacyDetectionService {
+        +detectFallacyAsync(String, String, String?, String?) CompletableFuture
+        +getTimeout() Int
+    }
+    
+    class TransactionTemplate {
+        +executeWithoutResult(TransactionCallbackWithoutResult) void
     }
     
     class MemberService {
@@ -59,11 +86,17 @@ classDiagram
     DebateArgumentController --> DebateArgumentService : uses
     DebateArgumentController --> MemberService : uses
     DebateArgumentService --> DebateArgumentRepository : uses
+    DebateArgumentService --> DebateFileRepository : uses
+    DebateArgumentService --> DebateTopicRepository : uses
+    DebateArgumentService --> DebateTopicService : uses
+    DebateArgumentService --> FallacyDetectionService : uses
+    DebateArgumentService --> TransactionTemplate : uses
     DebateArgumentRepository --> DebateArgumentEntity : manages
     DebateArgumentService --> DebateArgumentEntity : creates
     DebateArgumentService --> DebateArgumentResponse : returns
     DebateArgumentController --> DebateArgumentCreateRequest : receives
     DebateArgumentController --> DebateArgumentResponse : returns
     DebateArgumentEntity --> MemberEntity : references
+    DebateTopicService --> DebateTopicRepository : uses
 ```
 
