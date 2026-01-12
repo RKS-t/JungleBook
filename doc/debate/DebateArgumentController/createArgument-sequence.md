@@ -65,11 +65,11 @@ sequenceDiagram
         DebateArgumentRepository-->>TransactionTemplate: Optional<DebateArgumentEntity>
         TransactionTemplate->>TransactionTemplate: Update fallacy fields
         TransactionTemplate->>DebateArgumentRepository: save(entity)
-        TransactionTemplate->>DebateArgumentService: logger().info("Fallacy detection result saved")
+        TransactionTemplate->>DebateArgumentService: logger.info "Fallacy detection result saved"
     else TimeoutException
-        DebateArgumentService->>DebateArgumentService: logger().warn("Fallacy detection timeout")
+        DebateArgumentService->>DebateArgumentService: logger.warn "Fallacy detection timeout"
     else Other exception
-        DebateArgumentService->>DebateArgumentService: logger().error("Failed to save fallacy detection result")
+        DebateArgumentService->>DebateArgumentService: logger.error "Failed to save fallacy detection result"
     end
     
     alt Error occurs
