@@ -2,10 +2,8 @@ package org.example.junglebook.web.controller.post
 
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
-import org.example.junglebook.entity.post.BoardEntity
 import org.example.junglebook.enums.post.CountType
 import org.example.junglebook.model.Member
-import org.example.junglebook.repository.post.BoardRepository
 import org.example.junglebook.service.MemberService
 import org.example.junglebook.service.post.PostService
 import org.example.junglebook.web.dto.*
@@ -21,8 +19,7 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/posts")
 class PostController(
     private val postService: PostService,
-    private val memberService: MemberService,
-    private val boardRepository: BoardRepository
+    private val memberService: MemberService
 ) {
 
     @Operation(summary = "게시글 생성")
@@ -123,18 +120,12 @@ class PostController(
         @RequestParam boardId: Int
     ): ResponseEntity<CountResponse> {
         val memberId = getMemberId(member)
-        val board = requireNotNull(boardRepository.findById(boardId).orElse(null)) {
-            "Board not found: $boardId"
-        }
-        val count = postService.increaseCount(board, postId, memberId, CountType.LIKE)
+        val count = postService.increaseCount(boardId, postId, memberId, CountType.LIKE)
         return ResponseEntity.ok(CountResponse(count))
     }
 
     private fun getMemberId(member: Member): Long {
-        val memberEntity = memberService.findActivateMemberByLoginId(member.loginId)
-        return requireNotNull(memberEntity.id) {
-            "Member ID must not be null"
-        }
+        return memberService.getMemberId(member)
     }
 }
 

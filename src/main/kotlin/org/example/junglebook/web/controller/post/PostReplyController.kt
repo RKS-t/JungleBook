@@ -28,8 +28,7 @@ class PostReplyController(
         @PathVariable postId: Long
     ): ResponseEntity<List<PostReplyResponse>> {
         val replies = postReplyService.postReplyList(postId)
-        val responses = replies.map { PostReplyResponse.of(it) }
-        return ResponseEntity.ok(responses)
+        return ResponseEntity.ok(replies)
     }
 
     @Operation(summary = "댓글 생성")
@@ -39,10 +38,9 @@ class PostReplyController(
         @PathVariable postId: Long,
         @RequestBody request: PostReplyCreateRequest
     ): ResponseEntity<PostReplyResponse> {
-        val memberEntity = getMemberEntity(member)
-        val authorNickname = memberEntity.nickname ?: "익명"
-        val savedEntity = postReplyService.create(postId, request, memberEntity.id!!, authorNickname)
-        return ResponseEntity.status(HttpStatus.CREATED).body(PostReplyResponse.of(savedEntity))
+        val memberId = getMemberId(member)
+        val replyResponse = postReplyService.create(postId, request, memberId, member.loginId)
+        return ResponseEntity.status(HttpStatus.CREATED).body(replyResponse)
     }
 
     @Operation(summary = "댓글 수정")
@@ -53,10 +51,9 @@ class PostReplyController(
         @PathVariable replyId: Long,
         @RequestBody request: PostReplyUpdateRequest
     ): ResponseEntity<PostReplyResponse> {
-        val memberEntity = getMemberEntity(member)
-        val authorNickname = memberEntity.nickname ?: "익명"
-        val updatedEntity = postReplyService.modify(postId, replyId, request, memberEntity.id!!, authorNickname)
-        return ResponseEntity.ok(PostReplyResponse.of(updatedEntity))
+        val memberId = getMemberId(member)
+        val replyResponse = postReplyService.modify(postId, replyId, request, memberId, member.loginId)
+        return ResponseEntity.ok(replyResponse)
     }
 
     @Operation(summary = "댓글 삭제")
@@ -84,14 +81,7 @@ class PostReplyController(
     }
 
     private fun getMemberId(member: Member): Long {
-        val memberEntity = getMemberEntity(member)
-        return requireNotNull(memberEntity.id) {
-            "Member ID must not be null"
-        }
-    }
-
-    private fun getMemberEntity(member: Member): org.example.junglebook.entity.MemberEntity {
-        return memberService.findActivateMemberByLoginId(member.loginId)
+        return memberService.getMemberId(member)
     }
 }
 

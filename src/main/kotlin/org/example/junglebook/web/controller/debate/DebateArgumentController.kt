@@ -63,8 +63,7 @@ class DebateArgumentController(
         @RequestBody request: DebateArgumentCreateRequest
     ): ResponseEntity<DebateArgumentResponse> {
         val memberId = getMemberId(member)
-        val entity = request.toEntity(topicId, memberId)
-        val argumentResponse = debateArgumentService.createArgument(entity, request.fileIds)
+        val argumentResponse = debateArgumentService.createArgument(topicId, memberId, request)
         
         return ResponseEntity.status(HttpStatus.CREATED).body(argumentResponse)
     }
@@ -133,10 +132,7 @@ class DebateArgumentController(
     }
 
     private fun getMemberId(member: Member): Long {
-        val memberEntity = memberService.findActivateMemberByLoginId(member.loginId)
-        return requireNotNull(memberEntity.id) {
-            "Member ID must not be null"
-        }
+        return memberService.getMemberId(member)
     }
 }
 

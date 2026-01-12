@@ -72,19 +72,20 @@ class DebateArgumentService(
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
-    fun createArgument(entity: DebateArgumentEntity, fileIds: List<Long>?): DebateArgumentResponse {
-        if (entity.content.length > JBConstants.DEBATE_ARGUMENT_MAX_CONTENT_LENGTH) {
-            logger().warn("Argument content length exceeded: {} characters (max: {})", entity.content.length, JBConstants.DEBATE_ARGUMENT_MAX_CONTENT_LENGTH)
+    fun createArgument(topicId: Long, userId: Long, request: org.example.junglebook.web.dto.DebateArgumentCreateRequest): DebateArgumentResponse {
+        if (request.content.length > JBConstants.DEBATE_ARGUMENT_MAX_CONTENT_LENGTH) {
+            logger().warn("Argument content length exceeded: {} characters (max: {})", request.content.length, JBConstants.DEBATE_ARGUMENT_MAX_CONTENT_LENGTH)
             throw GlobalException(
                 DefaultErrorCode.WRONG_ACCESS,
-                "논증 내용은 최대 ${JBConstants.DEBATE_ARGUMENT_MAX_CONTENT_LENGTH}자까지 작성할 수 있습니다. (현재: ${entity.content.length}자)"
+                "논증 내용은 최대 ${JBConstants.DEBATE_ARGUMENT_MAX_CONTENT_LENGTH}자까지 작성할 수 있습니다. (현재: ${request.content.length}자)"
             )
         }
         
+        val entity = request.toEntity(topicId, userId)
         val savedEntity = debateArgumentRepository.save(entity)
         val savedEntityId = requireNotNull(savedEntity.id) { "Saved argument ID must not be null" }
 
-        fileIds?.forEach { fileId ->
+        request.fileIds?.forEach { fileId ->
             debateFileRepository.updateAttachStatus(
                 refType = DebateReferenceType.ARGUMENT.value,
                 refId = savedEntityId,
@@ -93,10 +94,9 @@ class DebateArgumentService(
             )
         }
 
-        debateTopicService.increaseArgumentCount(entity.topicId)
+        debateTopicService.increaseArgumentCount(topicId)
 
-        // 논증의 부모 토픽 정보를 조회하여 컨텍스트에 포함
-        val topic = debateTopicRepository.findByIdAndActiveYnTrue(entity.topicId)
+        val topic = debateTopicRepository.findByIdAndActiveYnTrue(topicId)
 
         fallacyDetectionService.detectFallacyAsync(
             text = savedEntity.content,
@@ -123,7 +123,14 @@ class DebateArgumentService(
                     }
                 }
             }.exceptionally { throwable ->
-                logger().error("Failed to save fallacy detection result: argumentId=$savedEntityId", throwable)
+                when (throwable) {
+                    is java.util.concurrent.TimeoutException -> {
+                        logger().warn("Fallacy detection timeout: argumentId=$savedEntityId, timeout=${fallacyDetectionService.getTimeout()}ms")
+                    }
+                    else -> {
+                        logger().error("Failed to save fallacy detection result: argumentId=$savedEntityId", throwable)
+                    }
+                }
                 null
             }
 

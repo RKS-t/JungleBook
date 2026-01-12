@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.HttpClientErrorException
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 @Service
 class FallacyDetectionService(
@@ -23,6 +25,8 @@ class FallacyDetectionService(
 
     @Value("\${fallacy.detection.service.timeout:5000}")
     private val timeout: Int = 5000
+
+    fun getTimeout(): Int = timeout
 
     fun detectFallacy(
         text: String, 
@@ -79,7 +83,7 @@ class FallacyDetectionService(
     ): CompletableFuture<FallacyDetectionResponse?> {
         return CompletableFuture.supplyAsync {
             detectFallacy(text, language, topicTitle, topicDescription)
-        }
+        }.orTimeout(timeout.toLong(), TimeUnit.MILLISECONDS)
     }
 
     fun batchDetectFallacy(texts: List<String>, language: String = "ko"): List<FallacyDetectionResponse> {

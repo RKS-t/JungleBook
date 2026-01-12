@@ -6,11 +6,15 @@ import org.example.junglebook.entity.MemberCampHistoryEntity
 import org.example.junglebook.entity.MemberEntity
 import org.example.junglebook.enums.Ideology
 import org.example.junglebook.model.Member
+import org.example.junglebook.enums.MemberType
 import org.example.junglebook.repository.MemberCampHistoryRepository
 import org.example.junglebook.repository.MemberRepository
+import org.example.junglebook.util.logger
 import org.example.junglebook.util.toBoolean
 import org.example.junglebook.web.dto.MemberDetailResponse
+import org.example.junglebook.web.dto.MemberPasswordUpdateRequest
 import org.example.junglebook.web.dto.SignUpRequest
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.authentication.InternalAuthenticationServiceException
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
@@ -23,7 +27,8 @@ import java.time.LocalDateTime
 @Service
 class MemberService(
     private val memberRepository: MemberRepository,
-    private val memberCampHistoryRepository: MemberCampHistoryRepository
+    private val memberCampHistoryRepository: MemberCampHistoryRepository,
+    private val passwordEncoder: PasswordEncoder
 ): UserDetailsService {
     @Throws(UsernameNotFoundException::class)
     override fun loadUserByUsername(loginId: String): UserDetails {
@@ -60,6 +65,7 @@ class MemberService(
     @Transactional
     fun signUp(request: SignUpRequest) {
         validateSignUpRequest(request)
+        request.encodedPassword = passwordEncoder.encode(request.password)
         val memberEntity = request.toMemberEntity()
         memberRepository.save(memberEntity)
     }
@@ -141,6 +147,13 @@ class MemberService(
 
     fun findByNickname(nickname: String): MemberEntity? = memberRepository.findByNickname(nickname)
 
+    fun getMemberId(member: org.example.junglebook.model.Member): Long {
+        val memberEntity = findActivateMemberByLoginId(member.loginId)
+        return requireNotNull(memberEntity.id) {
+            "Member ID must not be null"
+        }
+    }
+
     @Transactional
     fun updateMember(member: MemberEntity) {
         member.updatedAt = LocalDateTime.now()
@@ -153,5 +166,32 @@ class MemberService(
         member.deleteYn = 1
         member.updatedAt = LocalDateTime.now()
         memberRepository.save(member)
+    }
+
+    @Transactional
+    fun changePassword(loginId: String, request: MemberPasswordUpdateRequest) {
+        if (!request.isCorrect()) {
+            throw GlobalException(DefaultErrorCode.PASSWORD_MISMATCH)
+        }
+
+        val memberEntity = findActivateMemberByLoginId(loginId)
+
+        if (memberEntity.memberType == MemberType.SOCIAL) {
+            logger().warn("Social member attempted password change: loginId={}", loginId)
+            throw GlobalException(DefaultErrorCode.SOCIAL_MEMBER_PASSWORD_CHANGE_DENIED)
+        }
+
+        if (!passwordEncoder.matches(request.password, memberEntity.password)) {
+            logger().warn("Incorrect current password: loginId={}", loginId)
+            throw GlobalException(DefaultErrorCode.CURRENT_PASSWORD_INCORRECT)
+        }
+
+        val encodedPassword = passwordEncoder.encode(request.newPassword1)
+        passwordUpdate(memberEntity, encodedPassword)
+    }
+
+    fun getMemberNickname(loginId: String): String {
+        val memberEntity = findActivateMemberByLoginId(loginId)
+        return memberEntity.nickname ?: "익명"
     }
 }

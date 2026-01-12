@@ -35,9 +35,10 @@ class BoardController(
         @Parameter(description = "File", required = true) @RequestPart("file") file: MultipartFile
     ): ResponseEntity<PostFileResponse> {
         val boardId = Board.getIdByBoardName(boardName)
+        val memberId = requireNotNull(member.id) { "Member ID must not be null" }
         return ResponseEntity.ok(
             PostFileResponse.of(
-                postService.insertPostFile(boardId, false, member.id!!, file)
+                postService.insertPostFile(boardId, false, memberId, file)
             )
         )
     }

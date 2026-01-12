@@ -18,9 +18,20 @@ flowchart TD
     RequestValid -->|Yes| CreateArgumentEntity[Create DebateArgumentEntity]
     
     CreateArgumentEntity --> SaveArgument[Save Argument to Database<br/><i>DebateArgumentRepository</i>]
-    SaveArgument --> DetectFallacy[Detect Logical Fallacy<br/><i>FallacyDetectionService - Async</i>]
-    DetectFallacy --> CreateResponse[Create DebateArgumentResponse]
+    SaveArgument --> DetectFallacy[Detect Logical Fallacy Async<br/><i>FallacyDetectionService.detectFallacyAsync()<br/>with orTimeout()</i>]
+    DetectFallacy --> CreateResponse[Create DebateArgumentResponse<br/><i>Immediate return</i>]
     CreateResponse --> Return201[Return 201 Created]
+    
+    DetectFallacy -.->|Async Callback| AsyncProcess[Async Callback Processing<br/>Non-blocking]
+    AsyncProcess --> TimeoutCheck{Timeout<br/>Exception?}
+    TimeoutCheck -->|Yes| LogTimeout[Log Timeout Warning<br/><i>logger().warn()</i>]
+    TimeoutCheck -->|No| ProcessResult{Result<br/>Available?}
+    ProcessResult -->|Yes| UpdateFallacy[Update Fallacy Fields<br/><i>TransactionTemplate<br/>DebateArgumentRepository</i>]
+    ProcessResult -->|No| LogError[Log Error<br/><i>logger().error()</i>]
+    UpdateFallacy --> LogSuccess[Log Success<br/><i>logger().info()</i>]
+    LogTimeout --> End
+    LogError --> End
+    LogSuccess --> End
     
     Return201 --> End([End])
     GlobalExceptionHandler1 --> End

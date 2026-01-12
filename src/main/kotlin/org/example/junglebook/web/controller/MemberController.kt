@@ -32,7 +32,6 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
@@ -53,7 +52,6 @@ class MemberController(
     private val jwtTokenProperties: JwtTokenProperties,
     private val authenticationManager: AuthenticationManager,
     private val memberService: MemberService,
-    private val passwordEncoder: PasswordEncoder,
     private val socialMemberService: SocialMemberService,
     private val kakaoOAuthService: KakaoOAuthService,
     private val naverOAuthService: NaverOAuthService
@@ -76,7 +74,21 @@ class MemberController(
     @PostMapping("/social-login")
     fun socialLogin(@RequestBody request: SocialLoginRequest, response: HttpServletResponse): ResponseEntity<SocialLoginTokenDto> {
         val socialUserInfo = getSocialUserInfo(request.provider, request.accessToken)
-        val member = processSocialLogin(request.provider, socialUserInfo)
+        val member = socialMemberService.findBySocialLogin(request.provider, socialUserInfo.id)
+            ?.let { existingMember ->
+                socialMemberService.updateSocialMember(
+                    member = existingMember,
+                    name = socialUserInfo.name,
+                    email = socialUserInfo.email,
+                    profileImage = socialUserInfo.profileImage
+                )
+            } ?: socialMemberService.createOrLinkSocialMember(
+                name = socialUserInfo.name,
+                email = socialUserInfo.email,
+                profileImage = socialUserInfo.profileImage,
+                provider = request.provider,
+                providerId = socialUserInfo.id
+            )
         return ResponseEntity.ok(createSocialLoginResponse(member, response))
     }
 
@@ -94,7 +106,6 @@ class MemberController(
     @ApiOperation("일반 회원가입")
     @PostMapping("/signup")
     fun signUp(@RequestBody request: SignUpRequest): ResponseEntity<Void> {
-        request.encodedPassword = passwordEncoder.encode(request.password)
         memberService.signUp(request)
         return ResponseEntity.status(HttpStatus.CREATED).build()
     }
@@ -102,7 +113,6 @@ class MemberController(
     @ApiOperation("일반 회원가입 후 자동 로그인")
     @PostMapping("/signup-and-login")
     fun signUpAndLogin(@RequestBody request: SignUpRequest, response: HttpServletResponse): ResponseEntity<TokenDto> {
-        request.encodedPassword = passwordEncoder.encode(request.password)
         memberService.signUp(request)
 
         val authentication = authenticationManager.authenticate(
@@ -182,23 +192,7 @@ class MemberController(
         @AuthenticationPrincipal member: Member,
         @RequestBody request: MemberPasswordUpdateRequest
     ): ResponseEntity<Void> {
-        if (!request.isCorrect()) {
-            throw GlobalException(DefaultErrorCode.PASSWORD_MISMATCH)
-        }
-
-        val memberEntity = memberService.findActivateMemberByLoginId(member.loginId)
-
-        if (memberEntity.memberType == MemberType.SOCIAL) {
-            throw GlobalException(DefaultErrorCode.SOCIAL_MEMBER_PASSWORD_CHANGE_DENIED)
-        }
-
-        if (!passwordEncoder.matches(request.password, memberEntity.password)) {
-            throw GlobalException(DefaultErrorCode.CURRENT_PASSWORD_INCORRECT)
-        }
-
-        val encodedPassword = passwordEncoder.encode(request.newPassword1)
-        memberService.passwordUpdate(memberEntity, encodedPassword)
-
+        memberService.changePassword(member.loginId, request)
         return ResponseEntity.ok().build()
     }
 
@@ -230,23 +224,6 @@ class MemberController(
         return makeToken(member, response, includeRefreshToken = false)
     }
 
-    private fun processSocialLogin(provider: SocialProvider, socialUserInfo: SocialUserInfo): org.example.junglebook.entity.MemberEntity {
-        return socialMemberService.findBySocialLogin(provider, socialUserInfo.id)
-            ?.let { existingMember ->
-                socialMemberService.updateSocialMember(
-                    member = existingMember,
-                    name = socialUserInfo.name,
-                    email = socialUserInfo.email,
-                    profileImage = socialUserInfo.profileImage
-                )
-            } ?: socialMemberService.createOrLinkSocialMember(
-                name = socialUserInfo.name,
-                email = socialUserInfo.email,
-                profileImage = socialUserInfo.profileImage,
-                provider = provider,
-                providerId = socialUserInfo.id
-            )
-    }
 
     private fun createSocialLoginResponse(member: org.example.junglebook.entity.MemberEntity, response: HttpServletResponse): SocialLoginTokenDto {
         val memberAuth = Member.from(member)

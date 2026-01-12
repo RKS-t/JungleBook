@@ -1,6 +1,7 @@
 package org.example.junglebook.exception
 
 import jakarta.servlet.http.HttpServletRequest
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -37,6 +38,36 @@ class GlobalExceptionHandler {
         )
         
         return ResponseEntity.status(exception.status).body(errorResponse)
+    }
+
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun handleIllegalArgumentException(
+        exception: IllegalArgumentException,
+        request: HttpServletRequest
+    ): ResponseEntity<Map<String, Any>> {
+        val errorResponse = mapOf<String, Any>(
+            "error" to "Invalid Request",
+            "message" to (exception.message ?: "잘못된 요청입니다."),
+            "code" to HttpStatus.BAD_REQUEST.value().toString(),
+            "path" to request.requestURI
+        )
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse)
+    }
+
+    @ExceptionHandler(IllegalStateException::class)
+    fun handleIllegalStateException(
+        exception: IllegalStateException,
+        request: HttpServletRequest
+    ): ResponseEntity<Map<String, Any>> {
+        val errorResponse = mapOf<String, Any>(
+            "error" to "Invalid State",
+            "message" to (exception.message ?: "잘못된 상태입니다."),
+            "code" to HttpStatus.BAD_REQUEST.value().toString(),
+            "path" to request.requestURI
+        )
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse)
     }
 }
 

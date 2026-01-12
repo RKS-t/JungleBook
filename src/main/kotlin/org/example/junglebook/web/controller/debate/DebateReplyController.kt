@@ -138,10 +138,7 @@ class DebateReplyController(
     }
 
     private fun getMemberId(member: Member): Long {
-        val memberEntity = memberService.findActivateMemberByLoginId(member.loginId)
-        return requireNotNull(memberEntity.id) {
-            "Member ID must not be null"
-        }
+        return memberService.getMemberId(member)
     }
 }
 

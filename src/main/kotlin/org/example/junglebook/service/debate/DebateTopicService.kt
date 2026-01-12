@@ -206,7 +206,10 @@ class DebateTopicService(
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun deleteTopic(topicId: Long, userId: Long) {
         val topic = debateTopicRepository.findByIdAndActiveYnTrue(topicId)
-            ?: throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "토픽을 찾을 수 없습니다.")
+            ?: run {
+                logger().warn("Topic not found for delete: topicId={}", topicId)
+                throw GlobalException(DefaultErrorCode.WRONG_ACCESS, "토픽을 찾을 수 없습니다.")
+            }
 
         if (topic.creatorId != userId) {
             logger().warn("Unauthorized topic delete attempt: topicId: {}, userId: {}, topicCreatorId: {}", topicId, userId, topic.creatorId)

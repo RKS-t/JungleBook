@@ -9,6 +9,7 @@ import org.example.junglebook.entity.post.PostEntity
 import org.example.junglebook.entity.post.PostFileEntity
 import org.example.junglebook.enums.post.CountType
 import org.example.junglebook.enums.post.PostReferenceType
+import org.example.junglebook.repository.post.BoardRepository
 import org.example.junglebook.repository.post.PostCountHistoryRepository
 import org.example.junglebook.repository.post.PostFileRepository
 import org.example.junglebook.repository.post.PostRepository
@@ -28,9 +29,8 @@ class PostService(
     private val postRepository: PostRepository,
     private val postCountHistoryRepository: PostCountHistoryRepository,
     private val postFileRepository: PostFileRepository,
-    private val memberService: MemberService
-    // TODO: S3Service 구현 필요
-    // private val s3Service: S3Service
+    private val memberService: MemberService,
+    private val boardRepository: BoardRepository
 ) {
 
     @Transactional(readOnly = true)
@@ -54,7 +54,10 @@ class PostService(
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
-    fun increaseCount(board: BoardEntity, id: Long, userId: Long, countType: CountType): Int {
+    fun increaseCount(boardId: Int, id: Long, userId: Long, countType: CountType): Int {
+        val board = boardRepository.findById(boardId).orElse(null)
+        requireNotNull(board) { "Board not found: $boardId" }
+
         val existCount = postCountHistoryRepository.countByRefTypeAndRefIdAndUserId(
             PostReferenceType.POST, id, userId
         )

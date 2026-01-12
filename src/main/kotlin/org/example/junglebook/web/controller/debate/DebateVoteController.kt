@@ -45,12 +45,7 @@ class DebateVoteController(
     }
 
     private fun getMemberId(member: Member): Long {
-        val memberEntity = memberService.findActivateMemberByLoginId(member.loginId)
-        return requireNotNull(memberEntity.id) {
-            throw org.example.junglebook.exception.GlobalException(
-                org.example.junglebook.exception.DefaultErrorCode.USER_NOT_FOUND
-            )
-        }
+        return memberService.getMemberId(member)
     }
 }
 
