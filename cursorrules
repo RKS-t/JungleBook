@@ -12,11 +12,26 @@ Always use best practices for Docker:
 - Use .dockerignore files
 - Follow security best practices
 
-## Project Instructions (자동 적용)
-**중요**: 모든 작업 시작 전에 아래 instruction 파일들을 반드시 참조하세요.
+## Project Instructions (자동 적용 - 필수)
+**⚠️ CRITICAL: 모든 작업 시작 전에 반드시 아래 instruction 파일들을 우선 확인하세요.**
 
-- **코드 개발/수정 시**: `.cursor/instruction/cursor-instructions-dev.md` 파일을 먼저 읽고 지침을 따르세요.
-- **코드 리뷰 시**: `.cursor/instruction/cursor-instructions-review.md` 파일을 먼저 읽고 지침을 따르세요.
-- **테스트 작성 시**: `.cursor/instruction/cursor-instructions-test.md` 파일을 참조하세요.
+### 필수 확인 절차
+1. **사용자 요청을 받으면 즉시** `.cursor/instruction/` 디렉토리의 관련 지침서를 확인
+2. **작업 유형별 지침서**:
+   - **코드 개발/수정/리팩토링**: `.cursor/instruction/cursor-instructions-dev.md` 먼저 읽기
+   - **코드 리뷰/점검**: `.cursor/instruction/cursor-instructions-review.md` 먼저 읽기
+   - **테스트 코드 작성**: `.cursor/instruction/cursor-instructions-test.md` 먼저 읽기
+   - **Git 커밋**: `.cursor/instruction/git-commit-instructions.md` 먼저 읽기
+   - **Mermaid 차트 생성**: `.cursor/instruction/mermaid-chart-generation.md` 먼저 읽기
+3. **지침서 확인 후 작업 수행**: 지침서의 규칙과 가이드라인을 준수하여 작업 진행
 
-이 instruction 파일들은 작업 유형에 따라 자동으로 적용되어야 하므로, 작업 시작 전에 항상 해당 파일을 읽고 준수하세요.
+### 작업 흐름
+```
+사용자 요청 
+  → 관련 지침서 확인 (.cursor/instruction/)
+  → 지침서 규칙 적용
+  → 작업 수행
+  → 지침서 준수 여부 검증
+```
+
+**이 instruction 파일들은 모든 작업의 우선순위이며, 지침서를 확인하지 않고 작업을 시작하면 안 됩니다.**
