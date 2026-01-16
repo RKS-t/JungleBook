@@ -3,39 +3,46 @@
 ```mermaid
 sequenceDiagram
     participant Client
+    participant SecurityFilterChain
+    participant JwtAuthenticationFilter
     participant PostController
-    participant PostService
+    participant PostQueryService
     participant PostRepository
     participant GlobalExceptionHandler
     
-    Client->>PostController: GET /api/posts?boardId=1&sortType=LATEST&pageNo=0&limit=20
+    Client->>SecurityFilterChain: GET /api/posts?boardId=1&sortType=LATEST&pageNo=0&limit=20
+    SecurityFilterChain->>JwtAuthenticationFilter: Filter request
+    JwtAuthenticationFilter->>JwtAuthenticationFilter: Extract JWT token
+    JwtAuthenticationFilter->>JwtAuthenticationFilter: Validate token
+    JwtAuthenticationFilter->>JwtAuthenticationFilter: Load Member from token
+    JwtAuthenticationFilter->>PostController: Forward request with @AuthenticationPrincipal
     
     PostController->>PostController: getPostList(boardId, sortType, pageNo, limit, keyword)
-    PostController->>PostService: getPostList(boardId, sortType, pageNo, limit, keyword)
+    PostController->>PostQueryService: getPostList(boardId, sortType, pageNo, limit, keyword)
     
-    PostService->>PostService: create PageRequest(pageNo, limit)
+    PostQueryService->>PostQueryService: create PageRequest(pageNo, limit)
     
     alt sortType is LATEST
         alt keyword exists
-            PostService->>PostRepository: searchByKeyword(boardId, keyword, pageable)
+            PostQueryService->>PostRepository: searchByKeyword(boardId, keyword, pageable)
         else keyword is null
-            PostService->>PostRepository: findByBoardIdAndUseYnTrueOrderByNoticeYnDescCreatedDtDesc(boardId, pageable)
+            PostQueryService->>PostRepository: findByBoardIdAndUseYnTrueOrderByNoticeYnDescCreatedDtDesc(boardId, pageable)
         end
     else sortType is POPULAR
-        PostService->>PostRepository: findPopularByBoardId(boardId, pageable)
+        PostQueryService->>PostRepository: findPopularByBoardId(boardId, pageable)
     else sortType is MOST_VIEWED
-        PostService->>PostRepository: findByBoardIdAndUseYnTrueOrderByViewCntDesc(boardId, pageable)
+        PostQueryService->>PostRepository: findByBoardIdAndUseYnTrueOrderByViewCntDesc(boardId, pageable)
     else sortType is MOST_LIKED
-        PostService->>PostRepository: findByBoardIdAndUseYnTrueOrderByLikeCntDesc(boardId, pageable)
+        PostQueryService->>PostRepository: findByBoardIdAndUseYnTrueOrderByLikeCntDesc(boardId, pageable)
     end
     
-    PostRepository-->>PostService: List~PostEntity~
+    PostRepository-->>PostQueryService: List~PostEntity~
     
-    PostService->>PostRepository: countByBoardIdAndUseYnTrue(boardId)
-    PostRepository-->>PostService: Long
+    PostQueryService->>PostRepository: countByBoardIdAndUseYnTrue(boardId)
+    PostRepository-->>PostQueryService: Long
     
-    PostService->>PostService: create PostListResponse
-    PostService-->>PostController: PostListResponse
+    PostQueryService->>PostQueryService: create PostListResponse
+    PostQueryService-->>PostController: PostListResponse
     
     PostController-->>Client: 200 OK (PostListResponse)
     

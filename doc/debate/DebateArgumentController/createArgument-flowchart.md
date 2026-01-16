@@ -10,7 +10,7 @@ flowchart TD
     TokenValid -->|No| GlobalExceptionHandler2[GlobalExceptionHandler<br/>Return 401]
     TokenValid -->|Yes| ExtractMember[Extract Member from Token]
     
-    ExtractMember --> GetMemberId[Get Member ID from MemberService]
+    ExtractMember --> GetMemberId[Get Member ID<br/><i>MemberService.getMemberId</i>]
     GetMemberId --> ValidateContent[Validate Content Length<br/><i>JBConstants.DEBATE_ARGUMENT_MAX_CONTENT_LENGTH</i>]
     
     ValidateContent --> ContentValid{Content Length<br/>Valid?}
@@ -21,7 +21,7 @@ flowchart TD
     SaveArgument --> ProcessFiles{File IDs<br/>Exist?}
     ProcessFiles -->|Yes| UpdateFiles[Update File Attach Status<br/><i>DebateFileRepository.updateAttachStatus<br/>For each fileId</i>]
     ProcessFiles -->|No| IncreaseTopicCount
-    UpdateFiles --> IncreaseTopicCount[Increase Topic Argument Count<br/><i>DebateTopicService.increaseArgumentCount</i>]
+    UpdateFiles --> IncreaseTopicCount[Increase Topic Argument Count<br/><i>DebateTopicCommandService.increaseArgumentCount</i>]
     IncreaseTopicCount --> GetTopic[Get Topic Entity<br/><i>DebateTopicRepository.findByIdAndActiveYnTrue</i>]
     GetTopic --> DetectFallacy[Detect Logical Fallacy Async<br/><i>FallacyDetectionService.detectFallacyAsync<br/>with orTimeout</i>]
     DetectFallacy --> CreateResponse[Create DebateArgumentResponse<br/><i>DebateArgumentResponse.of<br/>Immediate return</i>]
@@ -43,10 +43,14 @@ flowchart TD
     GlobalExceptionHandler2 --> End
     GlobalExceptionHandler3 --> End
     
+    ErrorPath[Unhandled Exception] --> GlobalExceptionHandler4[GlobalExceptionHandler<br/>Return 400/403/500]
+    GlobalExceptionHandler4 --> End
+    
     style Start fill:#e1f5ff
     style End fill:#e1f5ff
     style GlobalExceptionHandler1 fill:#ffebee
     style GlobalExceptionHandler2 fill:#ffebee
     style GlobalExceptionHandler3 fill:#ffebee
+    style GlobalExceptionHandler4 fill:#ffebee
     style Return201 fill:#e8f5e9
 ```

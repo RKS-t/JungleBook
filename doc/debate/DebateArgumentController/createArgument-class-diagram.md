@@ -3,17 +3,17 @@
 ```mermaid
 classDiagram
     class DebateArgumentController {
-        -DebateArgumentService debateArgumentService
+        -DebateArgumentCommandService debateArgumentCommandService
         -MemberService memberService
         +createArgument(Member, Long, DebateArgumentCreateRequest) ResponseEntity
         -getMemberId(Member) Long
     }
     
-    class DebateArgumentService {
+    class DebateArgumentCommandService {
         -DebateArgumentRepository debateArgumentRepository
         -DebateFileRepository debateFileRepository
         -DebateTopicRepository debateTopicRepository
-        -DebateTopicService debateTopicService
+        -DebateTopicCommandService debateTopicCommandService
         -FallacyDetectionService fallacyDetectionService
         -TransactionTemplate transactionTemplate
         +createArgument(Long, Long, DebateArgumentCreateRequest) DebateArgumentResponse
@@ -27,7 +27,7 @@ classDiagram
         +findByIdAndActiveYnTrue(Long) DebateTopicEntity?
     }
     
-    class DebateTopicService {
+    class DebateTopicCommandService {
         +increaseArgumentCount(Long) void
     }
     
@@ -41,7 +41,7 @@ classDiagram
     }
     
     class MemberService {
-        +findActivateMemberByLoginId(String) MemberEntity
+        +getMemberId(Member) Long
     }
     
     class DebateArgumentRepository {
@@ -77,26 +77,19 @@ classDiagram
         +LocalDateTime createdAt
     }
     
-    class MemberEntity {
-        +Long id
-        +String loginId
-        +String nickname
-    }
-    
-    DebateArgumentController --> DebateArgumentService : uses
+    DebateArgumentController --> DebateArgumentCommandService : uses
     DebateArgumentController --> MemberService : uses
-    DebateArgumentService --> DebateArgumentRepository : uses
-    DebateArgumentService --> DebateFileRepository : uses
-    DebateArgumentService --> DebateTopicRepository : uses
-    DebateArgumentService --> DebateTopicService : uses
-    DebateArgumentService --> FallacyDetectionService : uses
-    DebateArgumentService --> TransactionTemplate : uses
+    DebateArgumentCommandService --> DebateArgumentRepository : uses
+    DebateArgumentCommandService --> DebateFileRepository : uses
+    DebateArgumentCommandService --> DebateTopicRepository : uses
+    DebateArgumentCommandService --> DebateTopicCommandService : uses
+    DebateArgumentCommandService --> FallacyDetectionService : uses
+    DebateArgumentCommandService --> TransactionTemplate : uses
     DebateArgumentRepository --> DebateArgumentEntity : manages
-    DebateArgumentService --> DebateArgumentEntity : creates
-    DebateArgumentService --> DebateArgumentResponse : returns
+    DebateArgumentCommandService --> DebateArgumentEntity : creates
+    DebateArgumentCommandService --> DebateArgumentResponse : returns
     DebateArgumentController --> DebateArgumentCreateRequest : receives
     DebateArgumentController --> DebateArgumentResponse : returns
-    DebateArgumentEntity --> MemberEntity : references
-    DebateTopicService --> DebateTopicRepository : uses
+    DebateTopicCommandService --> DebateTopicRepository : uses
 ```
 

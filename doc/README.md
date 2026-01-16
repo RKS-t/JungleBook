@@ -80,4 +80,7 @@
   - PostController.getPostDetail 차트 생성 (파일 조회 기능 반영)
   - PostController.getPostList 차트 생성 (조회수순/좋아요순 정렬 반영)
   - PostController.getPostsByAuthor 차트 생성 (작성자별 개수 조회 반영)
+- 2026-01-16: CQRS 구조 반영
+  - PostController/ Debate 컨트롤러 차트의 Command/Query 서비스 분리 반영
+  - 인증 필터 체인 및 예외 처리 흐름 최신화
 

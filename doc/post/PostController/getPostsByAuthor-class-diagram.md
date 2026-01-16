@@ -3,11 +3,11 @@
 ```mermaid
 classDiagram
     class PostController {
-        -PostService postService
+        -PostQueryService postQueryService
         +getPostsByAuthor(Long, Int, Int) ResponseEntity~PostListResponse~
     }
     
-    class PostService {
+    class PostQueryService {
         +getPostsByAuthor(Long, Int, Int) PostListResponse
     }
     
@@ -38,10 +38,10 @@ classDiagram
         +LocalDateTime createdAt
     }
     
-    PostController --> PostService : uses
-    PostService --> PostRepository : uses
+    PostController --> PostQueryService : uses
+    PostQueryService --> PostRepository : uses
     PostRepository --> PostEntity : manages
-    PostService --> PostListResponse : returns
+    PostQueryService --> PostListResponse : returns
     PostListResponse --> Post : contains
 ```
 

@@ -3,26 +3,33 @@
 ```mermaid
 sequenceDiagram
     participant Client
+    participant SecurityFilterChain
+    participant JwtAuthenticationFilter
     participant PostController
-    participant PostService
+    participant PostQueryService
     participant PostRepository
     participant GlobalExceptionHandler
     
-    Client->>PostController: GET /api/posts/author/:userId?pageNo=0&limit=20
+    Client->>SecurityFilterChain: GET /api/posts/author/:userId?pageNo=0&limit=20
+    SecurityFilterChain->>JwtAuthenticationFilter: Filter request
+    JwtAuthenticationFilter->>JwtAuthenticationFilter: Extract JWT token
+    JwtAuthenticationFilter->>JwtAuthenticationFilter: Validate token
+    JwtAuthenticationFilter->>JwtAuthenticationFilter: Load Member from token
+    JwtAuthenticationFilter->>PostController: Forward request with @AuthenticationPrincipal
     
     PostController->>PostController: getPostsByAuthor(userId, pageNo, limit)
-    PostController->>PostService: getPostsByAuthor(userId, pageNo, limit)
+    PostController->>PostQueryService: getPostsByAuthor(userId, pageNo, limit)
     
-    PostService->>PostService: create PageRequest(pageNo, limit)
+    PostQueryService->>PostQueryService: create PageRequest(pageNo, limit)
     
-    PostService->>PostRepository: findByUserIdAndUseYnTrueOrderByCreatedDtDesc(userId, pageable)
-    PostRepository-->>PostService: List~PostEntity~
+    PostQueryService->>PostRepository: findByUserIdAndUseYnTrueOrderByCreatedDtDesc(userId, pageable)
+    PostRepository-->>PostQueryService: List~PostEntity~
     
-    PostService->>PostRepository: countByUserIdAndUseYnTrue(userId)
-    PostRepository-->>PostService: Long
+    PostQueryService->>PostRepository: countByUserIdAndUseYnTrue(userId)
+    PostRepository-->>PostQueryService: Long
     
-    PostService->>PostService: create PostListResponse
-    PostService-->>PostController: PostListResponse
+    PostQueryService->>PostQueryService: create PostListResponse
+    PostQueryService-->>PostController: PostListResponse
     
     PostController-->>Client: 200 OK (PostListResponse)
     

@@ -3,11 +3,11 @@
 ```mermaid
 classDiagram
     class PostController {
-        -PostService postService
+        -PostQueryService postQueryService
         +getPostList(Int, PostSortType, Int, Int, String?) ResponseEntity~PostListResponse~
     }
     
-    class PostService {
+    class PostQueryService {
         +getPostList(Int, PostSortType, Int, Int, String?) PostListResponse
     }
     
@@ -54,11 +54,11 @@ classDiagram
         MOST_LIKED
     }
     
-    PostController --> PostService : uses
-    PostService --> PostRepository : uses
+    PostController --> PostQueryService : uses
+    PostQueryService --> PostRepository : uses
     PostRepository --> PostEntity : manages
-    PostService --> PostListResponse : returns
+    PostQueryService --> PostListResponse : returns
     PostListResponse --> Post : contains
-    PostService --> PostSortType : uses
+    PostQueryService --> PostSortType : uses
 ```
 

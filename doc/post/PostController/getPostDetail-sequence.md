@@ -3,35 +3,44 @@
 ```mermaid
 sequenceDiagram
     participant Client
+    participant SecurityFilterChain
+    participant JwtAuthenticationFilter
     participant PostController
-    participant PostService
+    participant PostQueryService
+    participant PostCommandService
     participant PostRepository
     participant PostFileRepository
     participant GlobalExceptionHandler
     
-    Client->>PostController: GET /api/posts/:postId?increaseView=true
+    Client->>SecurityFilterChain: GET /api/posts/:postId?increaseView=true
+    SecurityFilterChain->>JwtAuthenticationFilter: Filter request
+    JwtAuthenticationFilter->>JwtAuthenticationFilter: Extract JWT token
+    JwtAuthenticationFilter->>JwtAuthenticationFilter: Validate token
+    JwtAuthenticationFilter->>JwtAuthenticationFilter: Load Member from token
+    JwtAuthenticationFilter->>PostController: Forward request with @AuthenticationPrincipal
     
     PostController->>PostController: getPostDetail(postId, increaseView)
-    PostController->>PostService: getPostDetail(postId, increaseView)
+    PostController->>PostQueryService: getPostDetail(postId)
     
-    PostService->>PostRepository: findByIdAndUseYnTrue(postId)
-    PostRepository-->>PostService: PostEntity?
+    PostQueryService->>PostRepository: findByIdAndUseYnTrue(postId)
+    PostRepository-->>PostQueryService: PostEntity?
     
     alt Post not found
-        PostService-->>PostController: null
+        PostQueryService-->>PostController: null
         PostController-->>Client: 404 Not Found
     else Post found
-        alt increaseView is true
-            PostService->>PostRepository: increaseViewCount(postId)
-            PostRepository-->>PostService: Int
+        PostQueryService->>PostFileRepository: findByRefTypeAndRefId(PostReferenceType.POST.value, postId)
+        PostFileRepository-->>PostQueryService: List~PostFileEntity~
+        
+        PostQueryService->>PostQueryService: map files to PostFileResponse
+        PostQueryService->>PostQueryService: create PostDetailResponse
+        PostQueryService-->>PostController: PostDetailResponse
+        
+        opt increaseView is true
+            PostController->>PostCommandService: increaseViewCount(postId)
+            PostCommandService->>PostRepository: increaseViewCount(postId)
+            PostRepository-->>PostCommandService: Int
         end
-        
-        PostService->>PostFileRepository: findByRefTypeAndRefId(PostReferenceType.POST.value, postId)
-        PostFileRepository-->>PostService: List~PostFileEntity~
-        
-        PostService->>PostService: map files to PostFileResponse
-        PostService->>PostService: create PostDetailResponse
-        PostService-->>PostController: PostDetailResponse
         
         PostController-->>Client: 200 OK (PostDetailResponse)
     end

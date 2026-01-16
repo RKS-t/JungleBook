@@ -7,9 +7,9 @@ sequenceDiagram
     participant JwtAuthenticationFilter
     participant PostController
     participant MemberService
-    participant BoardRepository
-    participant PostService
+    participant PostCommandService
     participant PostRepository
+    participant PostFileRepository
     participant GlobalExceptionHandler
     
     Client->>SecurityFilterChain: POST /api/posts?boardId=1
@@ -21,16 +21,16 @@ sequenceDiagram
     
     PostController->>PostController: createPost(member, boardId, request)
     PostController->>MemberService: getMemberId(member)
-    MemberService->>MemberService: findActivateMemberByLoginId(loginId)
     MemberService-->>PostController: memberId
     
-    PostController->>BoardRepository: findById(boardId)
-    BoardRepository-->>PostController: BoardEntity
-    
-    PostController->>PostService: createPost(boardId, request, memberId)
-    PostService->>PostRepository: save(PostEntity)
-    PostRepository-->>PostService: PostEntity
-    PostService-->>PostController: PostResponse
+    PostController->>PostCommandService: createPost(boardId, request, memberId)
+    PostCommandService->>PostRepository: save(PostEntity)
+    PostRepository-->>PostCommandService: PostEntity
+    alt request.fileIds exists
+        PostCommandService->>PostFileRepository: updateAttachStatus(refType, refId, fileId, userId)
+        PostFileRepository-->>PostCommandService: updated
+    end
+    PostCommandService-->>PostController: PostResponse
     
     PostController-->>Client: 201 Created (PostResponse)
     

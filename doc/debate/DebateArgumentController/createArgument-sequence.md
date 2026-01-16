@@ -7,11 +7,11 @@ sequenceDiagram
     participant JwtAuthenticationFilter
     participant DebateArgumentController
     participant MemberService
-    participant DebateArgumentService
+    participant DebateArgumentCommandService
     participant DebateArgumentRepository
     participant DebateFileRepository
     participant DebateTopicRepository
-    participant DebateTopicService
+    participant DebateTopicCommandService
     participant FallacyDetectionService
     participant TransactionTemplate
     participant GlobalExceptionHandler
@@ -25,51 +25,50 @@ sequenceDiagram
     
     DebateArgumentController->>DebateArgumentController: createArgument(member, topicId, request)
     DebateArgumentController->>MemberService: getMemberId(member)
-    MemberService->>MemberService: findActivateMemberByLoginId(loginId)
     MemberService-->>DebateArgumentController: memberId
     
-    DebateArgumentController->>DebateArgumentService: createArgument(topicId, memberId, request)
-    DebateArgumentService->>DebateArgumentService: Validate content length
+    DebateArgumentController->>DebateArgumentCommandService: createArgument(topicId, memberId, request)
+    DebateArgumentCommandService->>DebateArgumentCommandService: Validate content length
     alt Content length exceeded
-        DebateArgumentService->>GlobalExceptionHandler: Throw GlobalException(WRONG_ACCESS)
+        DebateArgumentCommandService->>GlobalExceptionHandler: Throw GlobalException(WRONG_ACCESS)
         GlobalExceptionHandler-->>Client: 400 Bad Request
     end
-    DebateArgumentService->>DebateArgumentService: toEntity(topicId, userId)
-    DebateArgumentService->>DebateArgumentRepository: save(DebateArgumentEntity)
-    DebateArgumentRepository-->>DebateArgumentService: DebateArgumentEntity
+    DebateArgumentCommandService->>DebateArgumentCommandService: toEntity(topicId, userId)
+    DebateArgumentCommandService->>DebateArgumentRepository: save(DebateArgumentEntity)
+    DebateArgumentRepository-->>DebateArgumentCommandService: DebateArgumentEntity
     
     alt fileIds not empty
         loop For each fileId
-            DebateArgumentService->>DebateFileRepository: updateAttachStatus(refType, refId, fileId, userId)
+            DebateArgumentCommandService->>DebateFileRepository: updateAttachStatus(refType, refId, fileId, userId)
         end
     end
     
-    DebateArgumentService->>DebateTopicService: increaseArgumentCount(topicId)
-    DebateArgumentService->>DebateTopicRepository: findByIdAndActiveYnTrue(topicId)
-    DebateTopicRepository-->>DebateArgumentService: DebateTopicEntity?
+    DebateArgumentCommandService->>DebateTopicCommandService: increaseArgumentCount(topicId)
+    DebateArgumentCommandService->>DebateTopicRepository: findByIdAndActiveYnTrue(topicId)
+    DebateTopicRepository-->>DebateArgumentCommandService: DebateTopicEntity?
     
-    Note over DebateArgumentService,FallacyDetectionService: Asynchronous fallacy detection with timeout
-    DebateArgumentService->>FallacyDetectionService: detectFallacyAsync(content, topicTitle, topicDescription)
+    Note over DebateArgumentCommandService,FallacyDetectionService: Asynchronous fallacy detection with timeout
+    DebateArgumentCommandService->>FallacyDetectionService: detectFallacyAsync(content, topicTitle, topicDescription)
     FallacyDetectionService->>FallacyDetectionService: supplyAsync { detectFallacy(...) }
     FallacyDetectionService->>FallacyDetectionService: orTimeout(timeout, TimeUnit.MILLISECONDS)
-    FallacyDetectionService-->>DebateArgumentService: CompletableFuture<FallacyResult?>
+    FallacyDetectionService-->>DebateArgumentCommandService: CompletableFuture<FallacyResult?>
     
-    DebateArgumentService-->>DebateArgumentController: DebateArgumentResponse (immediate return)
+    DebateArgumentCommandService-->>DebateArgumentController: DebateArgumentResponse (immediate return)
     DebateArgumentController-->>Client: 201 Created (DebateArgumentResponse)
     
-    Note over DebateArgumentService: Async callback processing (non-blocking)
-    DebateArgumentService->>DebateArgumentService: thenAccept { result -> ... }
+    Note over DebateArgumentCommandService: Async callback processing (non-blocking)
+    DebateArgumentCommandService->>DebateArgumentCommandService: thenAccept { result -> ... }
     alt Fallacy detection success
-        DebateArgumentService->>TransactionTemplate: executeWithoutResult { ... }
+        DebateArgumentCommandService->>TransactionTemplate: executeWithoutResult { ... }
         TransactionTemplate->>DebateArgumentRepository: findById(argumentId)
         DebateArgumentRepository-->>TransactionTemplate: Optional<DebateArgumentEntity>
         TransactionTemplate->>TransactionTemplate: Update fallacy fields
         TransactionTemplate->>DebateArgumentRepository: save(entity)
-        TransactionTemplate->>DebateArgumentService: logger.info "Fallacy detection result saved"
+        TransactionTemplate->>DebateArgumentCommandService: logger.info "Fallacy detection result saved"
     else TimeoutException
-        DebateArgumentService->>DebateArgumentService: logger.warn "Fallacy detection timeout"
+        DebateArgumentCommandService->>DebateArgumentCommandService: logger.warn "Fallacy detection timeout"
     else Other exception
-        DebateArgumentService->>DebateArgumentService: logger.error "Failed to save fallacy detection result"
+        DebateArgumentCommandService->>DebateArgumentCommandService: logger.error "Failed to save fallacy detection result"
     end
     
     alt Error occurs

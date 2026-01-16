@@ -10,20 +10,21 @@ flowchart TD
     TokenValid -->|No| GlobalExceptionHandler2[GlobalExceptionHandler<br/>Return 401]
     TokenValid -->|Yes| ExtractMember[Extract Member from Token]
     
-    ExtractMember --> GetMemberId[Get Member ID from MemberService]
-    GetMemberId --> ValidateBoard[Validate Board ID]
-    
-    ValidateBoard --> BoardExists{Board Exists?}
-    BoardExists -->|No| GlobalExceptionHandler3[GlobalExceptionHandler<br/>Return 404]
-    BoardExists -->|Yes| CreatePostEntity[Create PostEntity]
+    ExtractMember --> GetMemberId[Get Member ID<br/><i>MemberService.getMemberId</i>]
+    GetMemberId --> CreatePostEntity[Create PostEntity]
     
     CreatePostEntity --> SavePost[Save Post to Database<br/><i>PostRepository</i>]
-    SavePost --> CreateResponse[Create PostResponse]
+    SavePost --> CheckFiles{Has File IDs?}
+    CheckFiles -->|Yes| UpdateFiles[Update File Attach Status<br/><i>PostFileRepository</i>]
+    CheckFiles -->|No| CreateResponse[Create PostResponse]
+    UpdateFiles --> CreateResponse[Create PostResponse]
     CreateResponse --> Return201[Return 201 Created]
     
     Return201 --> End([End])
     GlobalExceptionHandler1 --> End
     GlobalExceptionHandler2 --> End
+    
+    ErrorPath[Unhandled Exception] --> GlobalExceptionHandler3[GlobalExceptionHandler<br/>Return 400/403/500]
     GlobalExceptionHandler3 --> End
     
     style Start fill:#e1f5ff

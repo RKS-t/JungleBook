@@ -10,12 +10,8 @@ flowchart TD
     TokenValid -->|No| GlobalExceptionHandler2[GlobalExceptionHandler<br/>Return 401]
     TokenValid -->|Yes| ExtractMember[Extract Member from Token]
     
-    ExtractMember --> GetMemberId[Get Member ID from MemberService]
-    GetMemberId --> ValidateRequest[Validate DebateTopicCreateRequest]
-    
-    ValidateRequest --> RequestValid{Request Valid?}
-    RequestValid -->|No| GlobalExceptionHandler3[GlobalExceptionHandler<br/>Return 400]
-    RequestValid -->|Yes| CreateTopicEntity[Create DebateTopicEntity]
+    ExtractMember --> GetMemberId[Get Member ID<br/><i>MemberService.getMemberId</i>]
+    GetMemberId --> CreateTopicEntity[Create DebateTopicEntity]
     
     CreateTopicEntity --> SaveTopic[Save Topic to Database<br/><i>DebateTopicRepository</i>]
     SaveTopic --> CreateResponse[Create DebateTopicResponse]
@@ -24,6 +20,8 @@ flowchart TD
     Return201 --> End([End])
     GlobalExceptionHandler1 --> End
     GlobalExceptionHandler2 --> End
+    
+    ErrorPath[Unhandled Exception] --> GlobalExceptionHandler3[GlobalExceptionHandler<br/>Return 400/403/500]
     GlobalExceptionHandler3 --> End
     
     style Start fill:#e1f5ff

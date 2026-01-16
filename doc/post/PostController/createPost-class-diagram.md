@@ -3,27 +3,26 @@
 ```mermaid
 classDiagram
     class PostController {
-        -PostService postService
+        -PostCommandService postCommandService
         -MemberService memberService
-        -BoardRepository boardRepository
         +createPost() ResponseEntity
         -getMemberId() Long
     }
     
-    class PostService {
+    class PostCommandService {
         +createPost() PostResponse
     }
     
     class MemberService {
-        +findActivateMemberByLoginId(String) MemberEntity
-    }
-    
-    class BoardRepository {
-        +findById(Int) Optional~BoardEntity~
+        +getMemberId(Member) Long
     }
     
     class PostRepository {
         +save(PostEntity) PostEntity
+    }
+    
+    class PostFileRepository {
+        +updateAttachStatus(String, Long, Long, Long) Int
     }
     
     class PostEntity {
@@ -37,17 +36,6 @@ classDiagram
         +Boolean useYn
         +LocalDateTime createdAt
         +LocalDateTime updatedAt
-    }
-    
-    class BoardEntity {
-        +Int id
-        +String name
-    }
-    
-    class MemberEntity {
-        +Long id
-        +String loginId
-        +String nickname
     }
     
     class PostCreateRequest {
@@ -65,17 +53,14 @@ classDiagram
         +LocalDateTime createdAt
     }
     
-    PostController --> PostService : uses
+    PostController --> PostCommandService : uses
     PostController --> MemberService : uses
-    PostController --> BoardRepository : uses
-    PostService --> PostRepository : uses
-    PostService --> MemberService : uses
+    PostCommandService --> PostRepository : uses
+    PostCommandService --> PostFileRepository : uses
     PostRepository --> PostEntity : manages
-    PostService --> PostEntity : creates
-    PostService --> PostResponse : returns
+    PostCommandService --> PostEntity : creates
+    PostCommandService --> PostResponse : returns
     PostController --> PostCreateRequest : receives
     PostController --> PostResponse : returns
-    PostEntity --> BoardEntity : references
-    PostEntity --> MemberEntity : references
 ```
 

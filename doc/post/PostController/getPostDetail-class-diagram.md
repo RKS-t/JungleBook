@@ -3,12 +3,17 @@
 ```mermaid
 classDiagram
     class PostController {
-        -PostService postService
+        -PostQueryService postQueryService
+        -PostCommandService postCommandService
         +getPostDetail(Long, Boolean) ResponseEntity~PostDetailResponse~
     }
     
-    class PostService {
-        +getPostDetail(Long, Boolean) PostDetailResponse?
+    class PostQueryService {
+        +getPostDetail(Long) PostDetailResponse?
+    }
+    
+    class PostCommandService {
+        +increaseViewCount(Long) void
     }
     
     class PostRepository {
@@ -61,12 +66,14 @@ classDiagram
         +String url
     }
     
-    PostController --> PostService : uses
-    PostService --> PostRepository : uses
-    PostService --> PostFileRepository : uses
+    PostController --> PostQueryService : uses
+    PostController --> PostCommandService : uses
+    PostQueryService --> PostRepository : uses
+    PostQueryService --> PostFileRepository : uses
+    PostCommandService --> PostRepository : uses
     PostRepository --> PostEntity : manages
     PostFileRepository --> PostFileEntity : manages
-    PostService --> PostDetailResponse : returns
+    PostQueryService --> PostDetailResponse : returns
     PostDetailResponse --> PostResponse : contains
     PostDetailResponse --> PostFileResponse : contains
     PostEntity --> PostFileEntity : references

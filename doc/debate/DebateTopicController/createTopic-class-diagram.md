@@ -3,18 +3,18 @@
 ```mermaid
 classDiagram
     class DebateTopicController {
-        -DebateTopicService debateTopicService
+        -DebateTopicCommandService debateTopicCommandService
         -MemberService memberService
         +createTopic(Member, DebateTopicCreateRequest) ResponseEntity
         -getMemberId(Member) Long
     }
     
-    class DebateTopicService {
+    class DebateTopicCommandService {
         +createTopic(DebateTopicCreateRequest, Long) DebateTopicResponse
     }
     
     class MemberService {
-        +findActivateMemberByLoginId(String) MemberEntity
+        +getMemberId(Member) Long
     }
     
     class DebateTopicRepository {
@@ -23,7 +23,7 @@ classDiagram
     
     class DebateTopicEntity {
         +Long id
-        +Long userId
+        +Long creatorId
         +String title
         +String description
         +DebateTopicCategory category
@@ -53,20 +53,13 @@ classDiagram
         +LocalDateTime createdAt
     }
     
-    class MemberEntity {
-        +Long id
-        +String loginId
-        +String nickname
-    }
-    
-    DebateTopicController --> DebateTopicService : uses
+    DebateTopicController --> DebateTopicCommandService : uses
     DebateTopicController --> MemberService : uses
-    DebateTopicService --> DebateTopicRepository : uses
+    DebateTopicCommandService --> DebateTopicRepository : uses
     DebateTopicRepository --> DebateTopicEntity : manages
-    DebateTopicService --> DebateTopicEntity : creates
-    DebateTopicService --> DebateTopicResponse : returns
+    DebateTopicCommandService --> DebateTopicEntity : creates
+    DebateTopicCommandService --> DebateTopicResponse : returns
     DebateTopicController --> DebateTopicCreateRequest : receives
     DebateTopicController --> DebateTopicResponse : returns
-    DebateTopicEntity --> MemberEntity : references
 ```
 

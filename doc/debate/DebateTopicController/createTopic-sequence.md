@@ -7,7 +7,7 @@ sequenceDiagram
     participant JwtAuthenticationFilter
     participant DebateTopicController
     participant MemberService
-    participant DebateTopicService
+    participant DebateTopicCommandService
     participant DebateTopicRepository
     participant GlobalExceptionHandler
     
@@ -20,15 +20,14 @@ sequenceDiagram
     
     DebateTopicController->>DebateTopicController: createTopic(member, request)
     DebateTopicController->>MemberService: getMemberId(member)
-    MemberService->>MemberService: findActivateMemberByLoginId(loginId)
     MemberService-->>DebateTopicController: memberId
     
-    DebateTopicController->>DebateTopicService: createTopic(request, memberId)
-    DebateTopicService->>DebateTopicService: toEntity(creatorId)
-    DebateTopicService->>DebateTopicRepository: save(DebateTopicEntity)
-    DebateTopicRepository-->>DebateTopicService: DebateTopicEntity
-    DebateTopicService->>DebateTopicService: DebateTopicResponse.of(saved)
-    DebateTopicService-->>DebateTopicController: DebateTopicResponse
+    DebateTopicController->>DebateTopicCommandService: createTopic(request, memberId)
+    DebateTopicCommandService->>DebateTopicCommandService: toEntity(creatorId)
+    DebateTopicCommandService->>DebateTopicRepository: save(DebateTopicEntity)
+    DebateTopicRepository-->>DebateTopicCommandService: DebateTopicEntity
+    DebateTopicCommandService->>DebateTopicCommandService: DebateTopicResponse.of(saved)
+    DebateTopicCommandService-->>DebateTopicController: DebateTopicResponse
     
     DebateTopicController-->>Client: 201 Created (DebateTopicResponse)
     
