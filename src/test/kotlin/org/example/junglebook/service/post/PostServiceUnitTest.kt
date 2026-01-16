@@ -4,34 +4,30 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.example.junglebook.entity.post.BoardEntity
 import org.example.junglebook.entity.post.PostEntity
-import org.example.junglebook.entity.post.PostFileEntity
 import org.example.junglebook.enums.post.CountType
 import org.example.junglebook.enums.post.PostReferenceType
 import org.example.junglebook.exception.DefaultErrorCode
 import org.example.junglebook.exception.GlobalException
+import org.example.junglebook.repository.post.BoardRepository
 import org.example.junglebook.repository.post.PostCountHistoryRepository
 import org.example.junglebook.repository.post.PostFileRepository
 import org.example.junglebook.repository.post.PostRepository
-import org.example.junglebook.service.MemberService
 import org.example.junglebook.web.dto.PostCreateRequest
-import org.example.junglebook.web.dto.PostResponse
-import org.example.junglebook.web.dto.PostSortType
 import org.example.junglebook.web.dto.PostUpdateRequest
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
-import org.mockito.kotlin.any
-import org.mockito.kotlin.never
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyInt
+import org.mockito.ArgumentMatchers.anyLong
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.data.domain.PageRequest
-import java.time.LocalDateTime
 
 @ExtendWith(MockitoExtension::class)
-class PostServiceUnitTest {
+class PostCommandServiceUnitTest {
 
     @Mock
     private lateinit var postRepository: PostRepository
@@ -42,31 +38,25 @@ class PostServiceUnitTest {
     @Mock
     private lateinit var postFileRepository: PostFileRepository
 
-    @Mock
-    private lateinit var memberService: MemberService
-
     @InjectMocks
-    private lateinit var postService: PostService
+    private lateinit var postCommandService: PostCommandService
 
-    private lateinit var boardEntity: BoardEntity
-    private lateinit var postEntity: PostEntity
+    @Mock
+    private lateinit var boardRepository: BoardRepository
 
-    @BeforeEach
-    fun setUp() {
-        boardEntity = BoardEntity(
-            id = 1,
-            name = "테스트 게시판"
-        )
+    private val boardEntity = BoardEntity(
+        id = 1,
+        name = "테스트 게시판"
+    )
 
-        postEntity = PostEntity(
-            id = 1L,
-            boardId = 1,
-            userId = 100L,
-            title = "테스트 제목",
-            content = "테스트 내용",
-            authorNickname = "테스트유저"
-        )
-    }
+    private val postEntity = PostEntity(
+        id = 1L,
+        boardId = 1,
+        userId = 100L,
+        title = "테스트 제목",
+        content = "테스트 내용",
+        authorNickname = "테스트유저"
+    )
 
     @Test
     fun `createPost - 성공 케이스`() {
@@ -82,13 +72,13 @@ class PostServiceUnitTest {
             content = request.content
         )
 
-        whenever(postRepository.save(any())).thenReturn(savedEntity)
+        doReturn(savedEntity).whenever(postRepository).save(any(PostEntity::class.java))
 
-        val result = postService.createPost(1, request, userId)
+        val result = postCommandService.createPost(1, request, userId)
 
         assertThat(result).isNotNull
         assertThat(result.title).isEqualTo(request.title)
-        verify(postRepository).save(any())
+        verify(postRepository).save(any(PostEntity::class.java))
     }
 
     @Test
@@ -105,10 +95,10 @@ class PostServiceUnitTest {
             content = request.content
         )
 
-        whenever(postRepository.save(any())).thenReturn(savedEntity)
-        whenever(postFileRepository.updateAttachStatus(any(), any(), any(), any())).thenReturn(1)
+        doReturn(savedEntity).whenever(postRepository).save(any(PostEntity::class.java))
+        whenever(postFileRepository.updateAttachStatus(anyInt(), anyLong(), anyLong(), anyLong())).thenReturn(1)
 
-        val result = postService.createPost(1, request, userId)
+        val result = postCommandService.createPost(1, request, userId)
 
         assertThat(result).isNotNull
         verify(postFileRepository).updateAttachStatus(
@@ -126,32 +116,6 @@ class PostServiceUnitTest {
     }
 
     @Test
-    fun `getPostDetail - 성공 케이스`() {
-        val postId = 1L
-
-        whenever(postRepository.findByIdAndUseYnTrue(postId)).thenReturn(postEntity)
-        whenever(postRepository.increaseViewCount(postId)).thenReturn(1)
-
-        val result = postService.getPostDetail(postId, increaseView = true)
-
-        assertThat(result).isNotNull
-        assertThat(result?.post?.id).isEqualTo(postId)
-        verify(postRepository).increaseViewCount(postId)
-    }
-
-    @Test
-    fun `getPostDetail - 게시글을 찾을 수 없는 경우`() {
-        val postId = 999L
-
-        whenever(postRepository.findByIdAndUseYnTrue(postId)).thenReturn(null)
-
-        val result = postService.getPostDetail(postId)
-
-        assertThat(result).isNull()
-        verify(postRepository, never()).increaseViewCount(any())
-    }
-
-    @Test
     fun `updatePost - 성공 케이스`() {
         val postId = 1L
         val userId = 100L
@@ -165,13 +129,13 @@ class PostServiceUnitTest {
             content = request.content!!
         )
         whenever(postRepository.findByIdAndUseYnTrue(postId)).thenReturn(postEntity)
-        whenever(postRepository.save(any())).thenReturn(updatedEntity)
+        doReturn(updatedEntity).whenever(postRepository).save(any(PostEntity::class.java))
 
-        val result = postService.updatePost(postId, request, userId)
+        val result = postCommandService.updatePost(postId, request, userId)
 
         assertThat(result).isNotNull
         assertThat(result?.title).isEqualTo(request.title)
-        verify(postRepository).save(any())
+        verify(postRepository).save(any(PostEntity::class.java))
     }
 
     @Test
@@ -183,7 +147,7 @@ class PostServiceUnitTest {
         whenever(postRepository.findByIdAndUseYnTrue(postId)).thenReturn(postEntity)
 
         assertThatThrownBy {
-            postService.updatePost(postId, request, otherUserId)
+            postCommandService.updatePost(postId, request, otherUserId)
         }.isInstanceOf(GlobalException::class.java)
             .matches { exception ->
                 val globalException = exception as GlobalException
@@ -198,11 +162,11 @@ class PostServiceUnitTest {
         val deletedEntity = postEntity.copy(useYn = false)
 
         whenever(postRepository.findByIdAndUseYnTrue(postId)).thenReturn(postEntity)
-        whenever(postRepository.save(any())).thenReturn(deletedEntity)
+        doReturn(deletedEntity).whenever(postRepository).save(any(PostEntity::class.java))
 
-        postService.deletePost(postId, userId)
+        postCommandService.deletePost(postId, userId)
 
-        verify(postRepository).save(any())
+        verify(postRepository).save(any(PostEntity::class.java))
     }
 
     @Test
@@ -213,7 +177,7 @@ class PostServiceUnitTest {
         whenever(postRepository.findByIdAndUseYnTrue(postId)).thenReturn(postEntity)
 
         assertThatThrownBy {
-            postService.deletePost(postId, otherUserId)
+            postCommandService.deletePost(postId, otherUserId)
         }.isInstanceOf(GlobalException::class.java)
             .matches { exception ->
                 val globalException = exception as GlobalException
@@ -230,15 +194,16 @@ class PostServiceUnitTest {
         whenever(postCountHistoryRepository.countByRefTypeAndRefIdAndUserId(
             PostReferenceType.POST, postId, userId
         )).thenReturn(0)
+        whenever(boardRepository.findById(boardId)).thenReturn(java.util.Optional.of(boardEntity))
         whenever(postRepository.increaseLikeCount(postId)).thenReturn(1)
         whenever(postRepository.findById(postId)).thenReturn(
             java.util.Optional.of(postEntity.copy(likeCnt = 1))
         )
 
-        val result = postService.increaseCount(boardEntity, postId, userId, CountType.LIKE)
+        val result = postCommandService.increaseCount(boardId, postId, userId, CountType.LIKE)
 
         assertThat(result).isEqualTo(1)
-        verify(postCountHistoryRepository).save(any())
+        verify(postCountHistoryRepository).save(any(org.example.junglebook.entity.post.PostCountHistoryEntity::class.java))
     }
 
     @Test
@@ -250,9 +215,10 @@ class PostServiceUnitTest {
         whenever(postCountHistoryRepository.countByRefTypeAndRefIdAndUserId(
             PostReferenceType.POST, postId, userId
         )).thenReturn(1)
+        whenever(boardRepository.findById(boardId)).thenReturn(java.util.Optional.of(boardEntity))
 
         assertThatThrownBy {
-            postService.increaseCount(boardEntity, postId, userId, CountType.LIKE)
+            postCommandService.increaseCount(boardId, postId, userId, CountType.LIKE)
         }.isInstanceOf(GlobalException::class.java)
             .extracting { (it as GlobalException).code }
             .isEqualTo(DefaultErrorCode.ALREADY_EXISTS)
@@ -267,9 +233,10 @@ class PostServiceUnitTest {
         whenever(postCountHistoryRepository.countByRefTypeAndRefIdAndUserId(
             PostReferenceType.POST, postId, userId
         )).thenReturn(0)
+        whenever(boardRepository.findById(boardId)).thenReturn(java.util.Optional.of(boardEntity))
 
         assertThatThrownBy {
-            postService.increaseCount(boardEntity, postId, userId, CountType.DISLIKE)
+            postCommandService.increaseCount(boardId, postId, userId, CountType.DISLIKE)
         }.isInstanceOf(GlobalException::class.java)
             .extracting { (it as GlobalException).errorMessage }
             .asString()

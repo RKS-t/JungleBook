@@ -3,7 +3,8 @@ package org.example.junglebook.web.controller.post
 import org.assertj.core.api.Assertions.assertThat
 import org.example.junglebook.model.Member
 import org.example.junglebook.service.MemberService
-import org.example.junglebook.service.post.PostService
+import org.example.junglebook.service.post.PostCommandService
+import org.example.junglebook.service.post.PostQueryService
 import org.example.junglebook.web.dto.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -20,7 +21,10 @@ import org.springframework.http.ResponseEntity
 class PostControllerTest {
 
     @Mock
-    private lateinit var postService: PostService
+    private lateinit var postCommandService: PostCommandService
+
+    @Mock
+    private lateinit var postQueryService: PostQueryService
 
     @Mock
     private lateinit var memberService: MemberService
@@ -78,8 +82,8 @@ class PostControllerTest {
         )
         val boardId = 1
 
-        whenever(memberService.findActivateMemberByLoginId(member.loginId)).thenReturn(memberEntity)
-        whenever(postService.createPost(boardId, request, 100L)).thenReturn(postResponse)
+        whenever(memberService.getMemberId(member)).thenReturn(100L)
+        whenever(postCommandService.createPost(boardId, request, 100L)).thenReturn(postResponse.copy(title = request.title))
 
         val result = postController.createPost(member, boardId, request)
 
@@ -96,7 +100,7 @@ class PostControllerTest {
             files = emptyList()
         )
 
-        whenever(postService.getPostDetail(postId, true)).thenReturn(postDetail)
+        whenever(postQueryService.getPostDetail(postId)).thenReturn(postDetail)
 
         val result = postController.getPostDetail(postId, true)
 
@@ -109,7 +113,7 @@ class PostControllerTest {
     fun `getPostDetail - 게시글을 찾을 수 없는 경우`() {
         val postId = 999L
 
-        whenever(postService.getPostDetail(postId, true)).thenReturn(null)
+        whenever(postQueryService.getPostDetail(postId)).thenReturn(null)
 
         val result = postController.getPostDetail(postId, true)
 
@@ -140,7 +144,7 @@ class PostControllerTest {
             )
         )
 
-        whenever(postService.getPostList(boardId, sortType, pageNo, limit, null))
+        whenever(postQueryService.getPostList(boardId, sortType, pageNo, limit, null))
             .thenReturn(postList)
 
         val result = postController.getPostList(boardId, sortType, pageNo, limit, null)
@@ -159,8 +163,8 @@ class PostControllerTest {
         )
         val updatedResponse = postResponse.copy(title = request.title!!)
 
-        whenever(memberService.findActivateMemberByLoginId(member.loginId)).thenReturn(memberEntity)
-        whenever(postService.updatePost(postId, request, 100L)).thenReturn(updatedResponse)
+        whenever(memberService.getMemberId(member)).thenReturn(100L)
+        whenever(postCommandService.updatePost(postId, request, 100L)).thenReturn(updatedResponse)
 
         val result = postController.updatePost(member, postId, request)
 
@@ -173,7 +177,7 @@ class PostControllerTest {
     fun `deletePost - 성공 케이스`() {
         val postId = 1L
 
-        whenever(memberService.findActivateMemberByLoginId(member.loginId)).thenReturn(memberEntity)
+        whenever(memberService.getMemberId(member)).thenReturn(100L)
 
         val result = postController.deletePost(member, postId)
 

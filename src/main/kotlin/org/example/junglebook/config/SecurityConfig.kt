@@ -14,7 +14,6 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
@@ -74,7 +73,6 @@ class SecurityConfig(
         private val EXPOSED_HEADERS = listOf("Authorization")
 
         private const val CORS_MAX_AGE = 3600L
-        private const val BCRYPT_ROUNDS = 12
     }
 
     @Bean
@@ -147,14 +145,6 @@ class SecurityConfig(
         config: AuthenticationConfiguration
     ): AuthenticationManager {
         return config.authenticationManager
-    }
-
-    @Bean
-    fun passwordEncoder(): PasswordEncoder {
-        return BCryptPasswordEncoder(
-            BCryptPasswordEncoder.BCryptVersion.`$2A`,
-            BCRYPT_ROUNDS
-        )
     }
 
     @Bean

@@ -5,7 +5,8 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import org.example.junglebook.enums.post.CountType
 import org.example.junglebook.model.Member
 import org.example.junglebook.service.MemberService
-import org.example.junglebook.service.post.PostService
+import org.example.junglebook.service.post.PostCommandService
+import org.example.junglebook.service.post.PostQueryService
 import org.example.junglebook.web.dto.*
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -18,7 +19,8 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/posts")
 class PostController(
-    private val postService: PostService,
+    private val postCommandService: PostCommandService,
+    private val postQueryService: PostQueryService,
     private val memberService: MemberService
 ) {
 
@@ -30,7 +32,7 @@ class PostController(
         @RequestBody request: PostCreateRequest
     ): ResponseEntity<PostResponse> {
         val memberId = getMemberId(member)
-        val postResponse = postService.createPost(boardId, request, memberId)
+        val postResponse = postCommandService.createPost(boardId, request, memberId)
         return ResponseEntity.status(HttpStatus.CREATED).body(postResponse)
     }
 
@@ -40,8 +42,11 @@ class PostController(
         @PathVariable postId: Long,
         @RequestParam(defaultValue = "true") increaseView: Boolean
     ): ResponseEntity<PostDetailResponse> {
-        val postDetail = postService.getPostDetail(postId, increaseView)
+        val postDetail = postQueryService.getPostDetail(postId)
             ?: return ResponseEntity.notFound().build()
+        if (increaseView) {
+            postCommandService.increaseViewCount(postId)
+        }
         return ResponseEntity.ok(postDetail)
     }
 
@@ -54,7 +59,7 @@ class PostController(
         @RequestParam(defaultValue = "20") limit: Int,
         @RequestParam(required = false) keyword: String?
     ): ResponseEntity<PostListResponse> {
-        val postList = postService.getPostList(boardId, sortType, pageNo, limit, keyword)
+        val postList = postQueryService.getPostList(boardId, sortType, pageNo, limit, keyword)
         return ResponseEntity.ok(postList)
     }
 
@@ -64,7 +69,7 @@ class PostController(
         @RequestParam boardId: Int,
         @RequestParam(defaultValue = "10") limit: Int
     ): ResponseEntity<List<PostSimpleResponse>> {
-        val posts = postService.getPopularPosts(boardId, limit)
+        val posts = postQueryService.getPopularPosts(boardId, limit)
         return ResponseEntity.ok(posts)
     }
 
@@ -75,7 +80,7 @@ class PostController(
         @RequestParam(defaultValue = "0") pageNo: Int,
         @RequestParam(defaultValue = "20") limit: Int
     ): ResponseEntity<PostListResponse> {
-        val postList = postService.getPostsByAuthor(userId, pageNo, limit)
+        val postList = postQueryService.getPostsByAuthor(userId, pageNo, limit)
         return ResponseEntity.ok(postList)
     }
 
@@ -87,7 +92,7 @@ class PostController(
         @RequestBody request: PostUpdateRequest
     ): ResponseEntity<PostResponse> {
         val memberId = getMemberId(member)
-        val postResponse = postService.updatePost(postId, request, memberId)
+        val postResponse = postCommandService.updatePost(postId, request, memberId)
             ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok(postResponse)
     }
@@ -99,7 +104,7 @@ class PostController(
         @PathVariable postId: Long
     ): ResponseEntity<Void> {
         val memberId = getMemberId(member)
-        postService.deletePost(postId, memberId)
+        postCommandService.deletePost(postId, memberId)
         return ResponseEntity.noContent().build()
     }
 
@@ -108,7 +113,7 @@ class PostController(
     fun increaseViewCount(
         @PathVariable postId: Long
     ): ResponseEntity<Void> {
-        postService.increaseViewCount(postId)
+        postCommandService.increaseViewCount(postId)
         return ResponseEntity.ok().build()
     }
 
@@ -120,7 +125,7 @@ class PostController(
         @RequestParam boardId: Int
     ): ResponseEntity<CountResponse> {
         val memberId = getMemberId(member)
-        val count = postService.increaseCount(boardId, postId, memberId, CountType.LIKE)
+        val count = postCommandService.increaseCount(boardId, postId, memberId, CountType.LIKE)
         return ResponseEntity.ok(CountResponse(count))
     }
 

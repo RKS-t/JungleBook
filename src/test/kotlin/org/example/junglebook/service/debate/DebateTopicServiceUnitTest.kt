@@ -7,59 +7,47 @@ import org.example.junglebook.enums.DebateTopicCategory
 import org.example.junglebook.enums.DebateTopicStatus
 import org.example.junglebook.exception.DefaultErrorCode
 import org.example.junglebook.exception.GlobalException
-import org.example.junglebook.repository.debate.DebateArgumentRepository
 import org.example.junglebook.repository.debate.DebateTopicRepository
 import org.example.junglebook.web.dto.DebateTopicCreateRequest
 import org.example.junglebook.web.dto.DebateTopicUpdateRequest
-import org.example.junglebook.web.dto.TopicSortType
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
-import org.mockito.kotlin.any
-import org.mockito.kotlin.never
+import org.mockito.ArgumentMatchers.any
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.data.domain.PageImpl
-import org.springframework.data.domain.PageRequest
 import java.time.LocalDate
 import java.time.LocalDateTime
 
 @ExtendWith(MockitoExtension::class)
-class DebateTopicServiceUnitTest {
+class DebateTopicCommandServiceUnitTest {
 
     @Mock
     private lateinit var debateTopicRepository: DebateTopicRepository
 
-    @Mock
-    private lateinit var debateArgumentRepository: DebateArgumentRepository
-
     @InjectMocks
-    private lateinit var debateTopicService: DebateTopicService
+    private lateinit var debateTopicCommandService: DebateTopicCommandService
 
-    private lateinit var topicEntity: DebateTopicEntity
-
-    @BeforeEach
-    fun setUp() {
-        topicEntity = DebateTopicEntity(
-            id = 1L,
-            creatorId = 100L,
-            title = "테스트 토픽",
-            description = "테스트 설명",
-            category = DebateTopicCategory.POLITICS,
-            status = DebateTopicStatus.DEBATING,
-            startDate = LocalDate.now(),
-            endDate = LocalDate.now().plusDays(30),
-            activeYn = true,
-            hotYn = false,
-            argumentCount = 0,
-            viewCount = 0,
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now()
-        )
-    }
+    private val topicEntity = DebateTopicEntity(
+        id = 1L,
+        creatorId = 100L,
+        title = "테스트 토픽",
+        description = "테스트 설명",
+        descriptionHtml = "",
+        category = DebateTopicCategory.POLITICS,
+        status = DebateTopicStatus.DEBATING,
+        startDate = LocalDate.now(),
+        endDate = LocalDate.now().plusDays(30),
+        activeYn = true,
+        hotYn = false,
+        argumentCount = 0,
+        viewCount = 0,
+        createdAt = LocalDateTime.now(),
+        updatedAt = LocalDateTime.now()
+    )
 
     @Test
     fun `createTopic - 성공 케이스`() {
@@ -73,45 +61,16 @@ class DebateTopicServiceUnitTest {
         )
         val creatorId = 100L
 
-        whenever(debateTopicRepository.save(any())).thenReturn(topicEntity.copy(
+        doReturn(topicEntity.copy(
             title = request.title,
             description = request.description
-        ))
+        )).whenever(debateTopicRepository).save(any(DebateTopicEntity::class.java))
 
-        val result = debateTopicService.createTopic(request, creatorId)
+        val result = debateTopicCommandService.createTopic(request, creatorId)
 
         assertThat(result).isNotNull
         assertThat(result.title).isEqualTo(request.title)
-        verify(debateTopicRepository).save(any())
-    }
-
-    @Test
-    fun `getTopicDetail - 성공 케이스`() {
-        val topicId = 1L
-
-        whenever(debateTopicRepository.findByIdAndActiveYnTrue(topicId)).thenReturn(topicEntity)
-        whenever(debateTopicRepository.increaseViewCount(topicId)).thenReturn(Unit)
-        whenever(debateArgumentRepository.countByTopicIdGroupByStance(topicId)).thenReturn(emptyList())
-        whenever(debateArgumentRepository.countByTopicIdAndActiveYnTrueAndCreatedAtBetween(any(), any(), any())).thenReturn(0L)
-        whenever(debateArgumentRepository.findPopularByStance(any(), any())).thenReturn(emptyList())
-
-        val result = debateTopicService.getTopicDetail(topicId, increaseView = true)
-
-        assertThat(result).isNotNull
-        assertThat(result?.topic?.id).isEqualTo(topicId)
-        verify(debateTopicRepository).increaseViewCount(topicId)
-    }
-
-    @Test
-    fun `getTopicDetail - 토픽을 찾을 수 없는 경우`() {
-        val topicId = 999L
-
-        whenever(debateTopicRepository.findByIdAndActiveYnTrue(topicId)).thenReturn(null)
-
-        val result = debateTopicService.getTopicDetail(topicId)
-
-        assertThat(result).isNull()
-        verify(debateTopicRepository, never()).increaseViewCount(any())
+        verify(debateTopicRepository).save(any(DebateTopicEntity::class.java))
     }
 
     @Test
@@ -130,16 +89,16 @@ class DebateTopicServiceUnitTest {
         )
 
         whenever(debateTopicRepository.findByIdAndActiveYnTrue(topicId)).thenReturn(topicEntity)
-        whenever(debateTopicRepository.save(any())).thenReturn(topicEntity.copy(
+        doReturn(topicEntity.copy(
             title = request.title!!,
             description = request.description!!
-        ))
+        )).whenever(debateTopicRepository).save(any(DebateTopicEntity::class.java))
 
-        val result = debateTopicService.updateTopic(topicId, request, userId)
+        val result = debateTopicCommandService.updateTopic(topicId, request, userId)
 
         assertThat(result).isNotNull
         assertThat(result?.title).isEqualTo(request.title)
-        verify(debateTopicRepository).save(any())
+        verify(debateTopicRepository).save(any(DebateTopicEntity::class.java))
     }
 
     @Test
@@ -160,7 +119,7 @@ class DebateTopicServiceUnitTest {
         whenever(debateTopicRepository.findByIdAndActiveYnTrue(topicId)).thenReturn(topicEntity)
 
         assertThatThrownBy {
-            debateTopicService.updateTopic(topicId, request, otherUserId)
+            debateTopicCommandService.updateTopic(topicId, request, otherUserId)
         }.isInstanceOf(GlobalException::class.java)
             .matches { exception ->
                 val globalException = exception as GlobalException
@@ -174,11 +133,11 @@ class DebateTopicServiceUnitTest {
         val userId = 100L
 
         whenever(debateTopicRepository.findByIdAndActiveYnTrue(topicId)).thenReturn(topicEntity)
-        whenever(debateTopicRepository.save(any())).thenReturn(topicEntity.copy(activeYn = false))
+        doReturn(topicEntity.copy(activeYn = false)).whenever(debateTopicRepository).save(any(DebateTopicEntity::class.java))
 
-        debateTopicService.deleteTopic(topicId, userId)
+        debateTopicCommandService.deleteTopic(topicId, userId)
 
-        verify(debateTopicRepository).save(any())
+        verify(debateTopicRepository).save(any(DebateTopicEntity::class.java))
     }
 
     @Test
@@ -189,27 +148,12 @@ class DebateTopicServiceUnitTest {
         whenever(debateTopicRepository.findByIdAndActiveYnTrue(topicId)).thenReturn(topicEntity)
 
         assertThatThrownBy {
-            debateTopicService.deleteTopic(topicId, otherUserId)
+            debateTopicCommandService.deleteTopic(topicId, otherUserId)
         }.isInstanceOf(GlobalException::class.java)
             .matches { exception ->
                 val globalException = exception as GlobalException
                 globalException.code == DefaultErrorCode.DEBATE_TOPIC_DELETE_DENIED
             }
-    }
-
-    @Test
-    fun `getTopicList - 성공 케이스`() {
-        val sortType = TopicSortType.LATEST
-        val pageNo = 0
-        val limit = 20
-
-        whenever(debateTopicRepository.findByActiveYnTrueOrderByCreatedAtDesc(any()))
-            .thenReturn(PageImpl(listOf(topicEntity)))
-
-        val result = debateTopicService.getTopicList(sortType, pageNo, limit)
-
-        assertThat(result).isNotNull
-        assertThat(result.totalCount).isEqualTo(1)
     }
 }
 

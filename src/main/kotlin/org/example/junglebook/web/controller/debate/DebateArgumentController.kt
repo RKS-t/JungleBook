@@ -5,7 +5,8 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import org.example.junglebook.enums.ArgumentStance
 import org.example.junglebook.model.Member
 import org.example.junglebook.service.MemberService
-import org.example.junglebook.service.debate.DebateArgumentService
+import org.example.junglebook.service.debate.DebateArgumentCommandService
+import org.example.junglebook.service.debate.DebateArgumentQueryService
 import org.example.junglebook.web.dto.*
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -18,7 +19,8 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/debate/topics/{topicId}/arguments")
 class DebateArgumentController(
-    private val debateArgumentService: DebateArgumentService,
+    private val debateArgumentCommandService: DebateArgumentCommandService,
+    private val debateArgumentQueryService: DebateArgumentQueryService,
     private val memberService: MemberService
 ) {
 
@@ -27,7 +29,7 @@ class DebateArgumentController(
     fun getPopularArguments(
         @PathVariable topicId: Long
     ): ResponseEntity<Map<ArgumentStance, List<DebateArgumentSimpleResponse>>> {
-        val popularArguments = debateArgumentService.getPopularList(topicId)
+        val popularArguments = debateArgumentQueryService.getPopularList(topicId)
         return ResponseEntity.ok(popularArguments)
     }
 
@@ -39,7 +41,7 @@ class DebateArgumentController(
         @RequestParam(defaultValue = "0") pageNo: Int,
         @RequestParam(defaultValue = "20") limit: Int
     ): ResponseEntity<DebateArgumentListResponse> {
-        val argumentList = debateArgumentService.getPageableList(topicId, stance, pageNo, limit)
+        val argumentList = debateArgumentQueryService.getPageableList(topicId, stance, pageNo, limit)
         return ResponseEntity.ok(argumentList)
     }
 
@@ -50,8 +52,11 @@ class DebateArgumentController(
         @PathVariable argumentId: Long,
         @RequestParam(defaultValue = "true") increaseView: Boolean
     ): ResponseEntity<DebateArgumentResponse> {
-        val argument = debateArgumentService.getArgument(topicId, argumentId, increaseView)
+        val argument = debateArgumentQueryService.getArgument(topicId, argumentId)
             ?: return ResponseEntity.notFound().build()
+        if (increaseView) {
+            debateArgumentCommandService.increaseViewCount(argumentId)
+        }
         return ResponseEntity.ok(argument)
     }
 
@@ -63,7 +68,7 @@ class DebateArgumentController(
         @RequestBody request: DebateArgumentCreateRequest
     ): ResponseEntity<DebateArgumentResponse> {
         val memberId = getMemberId(member)
-        val argumentResponse = debateArgumentService.createArgument(topicId, memberId, request)
+        val argumentResponse = debateArgumentCommandService.createArgument(topicId, memberId, request)
         
         return ResponseEntity.status(HttpStatus.CREATED).body(argumentResponse)
     }
@@ -76,7 +81,7 @@ class DebateArgumentController(
         @PathVariable argumentId: Long
     ): ResponseEntity<Void> {
         val memberId = getMemberId(member)
-        debateArgumentService.deleteArgument(topicId, argumentId, memberId)
+        debateArgumentCommandService.deleteArgument(topicId, argumentId, memberId)
         return ResponseEntity.noContent().build()
     }
 
@@ -87,7 +92,7 @@ class DebateArgumentController(
         @RequestParam(defaultValue = "0") pageNo: Int,
         @RequestParam(defaultValue = "20") limit: Int
     ): ResponseEntity<DebateArgumentListResponse> {
-        val argumentList = debateArgumentService.getArgumentsByAuthor(userId, pageNo, limit)
+        val argumentList = debateArgumentQueryService.getArgumentsByAuthor(userId, pageNo, limit)
         return ResponseEntity.ok(argumentList)
     }
 
@@ -96,7 +101,7 @@ class DebateArgumentController(
     fun getTopicStatistics(
         @PathVariable topicId: Long
     ): ResponseEntity<Map<ArgumentStance, Int>> {
-        val statistics = debateArgumentService.getTopicStatistics(topicId)
+        val statistics = debateArgumentQueryService.getTopicStatistics(topicId)
         return ResponseEntity.ok(statistics)
     }
 
@@ -106,7 +111,7 @@ class DebateArgumentController(
         @PathVariable argumentId: Long,
         @RequestParam increase: Boolean
     ): ResponseEntity<Map<String, Boolean>> {
-        val result = debateArgumentService.toggleSupport(argumentId, increase)
+        val result = debateArgumentCommandService.toggleSupport(argumentId, increase)
         return ResponseEntity.ok(mapOf("success" to result))
     }
 
@@ -116,7 +121,7 @@ class DebateArgumentController(
         @PathVariable argumentId: Long,
         @RequestParam increase: Boolean
     ): ResponseEntity<Map<String, Boolean>> {
-        val result = debateArgumentService.toggleOppose(argumentId, increase)
+        val result = debateArgumentCommandService.toggleOppose(argumentId, increase)
         return ResponseEntity.ok(mapOf("success" to result))
     }
 
@@ -127,7 +132,7 @@ class DebateArgumentController(
         @RequestParam(defaultValue = "0") pageNo: Int,
         @RequestParam(defaultValue = "20") limit: Int
     ): ResponseEntity<DebateArgumentListResponse> {
-        val argumentList = debateArgumentService.getAllArgumentsByTopic(topicId, pageNo, limit)
+        val argumentList = debateArgumentQueryService.getAllArgumentsByTopic(topicId, pageNo, limit)
         return ResponseEntity.ok(argumentList)
     }
 

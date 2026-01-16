@@ -1,9 +1,9 @@
 package org.example.junglebook.service.debate
 
-import org.example.junglebook.exception.DefaultErrorCode
-import org.example.junglebook.exception.GlobalException
 import org.example.junglebook.entity.debate.DebateVoteEntity
 import org.example.junglebook.enums.VoteType
+import org.example.junglebook.exception.DefaultErrorCode
+import org.example.junglebook.exception.GlobalException
 import org.example.junglebook.repository.MemberRepository
 import org.example.junglebook.repository.debate.DebateArgumentRepository
 import org.example.junglebook.repository.debate.DebateVoteRepository
@@ -13,11 +13,11 @@ import org.springframework.transaction.annotation.Isolation
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class DebateVoteService (
+class DebateVoteCommandService(
     private val debateVoteRepository: DebateVoteRepository,
     private val memberRepository: MemberRepository,
     private val debateArgumentRepository: DebateArgumentRepository
-){
+) {
 
     @Transactional(isolation = Isolation.REPEATABLE_READ, rollbackFor = [Exception::class])
     fun vote(argumentId: Long, memberId: Long, voteType: VoteType): Boolean {

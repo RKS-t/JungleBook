@@ -10,7 +10,7 @@ import org.springframework.web.multipart.MultipartFile
 import jakarta.validation.constraints.Min
 import org.example.junglebook.entity.MemberEntity
 import org.example.junglebook.enums.post.Board
-import org.example.junglebook.service.post.PostService
+import org.example.junglebook.service.post.PostCommandService
 import org.example.junglebook.web.dto.PostFileResponse
 
 @Tag(name = "게시판")
@@ -18,7 +18,7 @@ import org.example.junglebook.web.dto.PostFileResponse
 @RestController
 @RequestMapping("/api/board")
 class BoardController(
-    private val postService: PostService
+    private val postCommandService: PostCommandService
 ) {
 
     @Operation(summary = "게시판 목록")
@@ -38,7 +38,7 @@ class BoardController(
         val memberId = requireNotNull(member.id) { "Member ID must not be null" }
         return ResponseEntity.ok(
             PostFileResponse.of(
-                postService.insertPostFile(boardId, false, memberId, file)
+                postCommandService.insertPostFile(boardId, false, memberId, file)
             )
         )
     }

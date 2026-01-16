@@ -4,7 +4,8 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.example.junglebook.model.Member
 import org.example.junglebook.service.MemberService
-import org.example.junglebook.service.debate.DebateReplyService
+import org.example.junglebook.service.debate.DebateReplyCommandService
+import org.example.junglebook.service.debate.DebateReplyQueryService
 import org.example.junglebook.web.dto.*
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -17,7 +18,8 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/debate/arguments/{argumentId}/replies")
 class DebateReplyController(
-    private val debateReplyService: DebateReplyService,
+    private val debateReplyCommandService: DebateReplyCommandService,
+    private val debateReplyQueryService: DebateReplyQueryService,
     private val memberService: MemberService
 ) {
 
@@ -30,7 +32,7 @@ class DebateReplyController(
     ): ResponseEntity<DebateReplyResponse> {
         val memberId = getMemberId(member)
         val entity = request.toEntity(argumentId, memberId)
-        val replyResponse = debateReplyService.createReply(entity, request.fileIds)
+        val replyResponse = debateReplyCommandService.createReply(entity, request.fileIds)
         
         return ResponseEntity.status(HttpStatus.CREATED).body(replyResponse)
     }
@@ -43,7 +45,7 @@ class DebateReplyController(
         @RequestParam(defaultValue = "false") deleteChildren: Boolean
     ): ResponseEntity<Void> {
         val memberId = getMemberId(member)
-        debateReplyService.deleteReply(replyId, memberId, deleteChildren)
+        debateReplyCommandService.deleteReply(replyId, memberId, deleteChildren)
         return ResponseEntity.noContent().build()
     }
 
@@ -52,7 +54,7 @@ class DebateReplyController(
     fun getReply(
         @PathVariable replyId: Long
     ): ResponseEntity<DebateReplyResponse> {
-        val reply = debateReplyService.getReply(replyId)
+        val reply = debateReplyQueryService.getReply(replyId)
         return ResponseEntity.ok(reply)
     }
 
@@ -63,7 +65,7 @@ class DebateReplyController(
         @RequestParam(defaultValue = "0") pageNo: Int,
         @RequestParam(defaultValue = "20") limit: Int
     ): ResponseEntity<DebateReplyListResponse> {
-        val replyList = debateReplyService.getRepliesByArgument(argumentId, pageNo, limit)
+        val replyList = debateReplyQueryService.getRepliesByArgument(argumentId, pageNo, limit)
         return ResponseEntity.ok(replyList)
     }
 
@@ -74,7 +76,7 @@ class DebateReplyController(
         @RequestParam(defaultValue = "0") pageNo: Int,
         @RequestParam(defaultValue = "20") limit: Int
     ): ResponseEntity<DebateReplyListResponse> {
-        val replyList = debateReplyService.getTopLevelReplies(argumentId, pageNo, limit)
+        val replyList = debateReplyQueryService.getTopLevelReplies(argumentId, pageNo, limit)
         return ResponseEntity.ok(replyList)
     }
 
@@ -83,7 +85,7 @@ class DebateReplyController(
     fun getChildReplies(
         @PathVariable replyId: Long
     ): ResponseEntity<List<DebateReplySimpleResponse>> {
-        val childReplies = debateReplyService.getChildReplies(replyId)
+        val childReplies = debateReplyQueryService.getChildReplies(replyId)
         return ResponseEntity.ok(childReplies)
     }
 
@@ -94,7 +96,7 @@ class DebateReplyController(
         @RequestParam(defaultValue = "0") pageNo: Int,
         @RequestParam(defaultValue = "20") limit: Int
     ): ResponseEntity<DebateReplyListResponse> {
-        val replyList = debateReplyService.getRepliesByAuthor(userId, pageNo, limit)
+        val replyList = debateReplyQueryService.getRepliesByAuthor(userId, pageNo, limit)
         return ResponseEntity.ok(replyList)
     }
 
@@ -104,7 +106,7 @@ class DebateReplyController(
         @PathVariable argumentId: Long,
         @RequestParam(defaultValue = "5") limit: Int
     ): ResponseEntity<List<DebateReplySimpleResponse>> {
-        val popularReplies = debateReplyService.getPopularReplies(argumentId, limit)
+        val popularReplies = debateReplyQueryService.getPopularReplies(argumentId, limit)
         return ResponseEntity.ok(popularReplies)
     }
 
@@ -114,7 +116,7 @@ class DebateReplyController(
         @PathVariable replyId: Long,
         @RequestParam increase: Boolean
     ): ResponseEntity<Map<String, Boolean>> {
-        val result = debateReplyService.toggleSupport(replyId, increase)
+        val result = debateReplyCommandService.toggleSupport(replyId, increase)
         return ResponseEntity.ok(mapOf("success" to result))
     }
 
@@ -124,7 +126,7 @@ class DebateReplyController(
         @PathVariable replyId: Long,
         @RequestParam increase: Boolean
     ): ResponseEntity<Map<String, Boolean>> {
-        val result = debateReplyService.toggleOppose(replyId, increase)
+        val result = debateReplyCommandService.toggleOppose(replyId, increase)
         return ResponseEntity.ok(mapOf("success" to result))
     }
 
@@ -133,7 +135,7 @@ class DebateReplyController(
     fun getReplyStatistics(
         @PathVariable argumentId: Long
     ): ResponseEntity<ReplyStatistics> {
-        val statistics = debateReplyService.getReplyStatistics(argumentId)
+        val statistics = debateReplyQueryService.getReplyStatistics(argumentId)
         return ResponseEntity.ok(statistics)
     }
 

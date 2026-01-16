@@ -5,7 +5,8 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import org.example.junglebook.enums.post.CountType
 import org.example.junglebook.model.Member
 import org.example.junglebook.service.MemberService
-import org.example.junglebook.service.post.PostReplyService
+import org.example.junglebook.service.post.PostReplyCommandService
+import org.example.junglebook.service.post.PostReplyQueryService
 import org.example.junglebook.web.dto.*
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -18,7 +19,8 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/posts/{postId}/replies")
 class PostReplyController(
-    private val postReplyService: PostReplyService,
+    private val postReplyCommandService: PostReplyCommandService,
+    private val postReplyQueryService: PostReplyQueryService,
     private val memberService: MemberService
 ) {
 
@@ -27,7 +29,7 @@ class PostReplyController(
     fun getReplyList(
         @PathVariable postId: Long
     ): ResponseEntity<List<PostReplyResponse>> {
-        val replies = postReplyService.postReplyList(postId)
+        val replies = postReplyQueryService.postReplyList(postId)
         return ResponseEntity.ok(replies)
     }
 
@@ -39,7 +41,7 @@ class PostReplyController(
         @RequestBody request: PostReplyCreateRequest
     ): ResponseEntity<PostReplyResponse> {
         val memberId = getMemberId(member)
-        val replyResponse = postReplyService.create(postId, request, memberId, member.loginId)
+        val replyResponse = postReplyCommandService.create(postId, request, memberId, member.loginId)
         return ResponseEntity.status(HttpStatus.CREATED).body(replyResponse)
     }
 
@@ -52,7 +54,7 @@ class PostReplyController(
         @RequestBody request: PostReplyUpdateRequest
     ): ResponseEntity<PostReplyResponse> {
         val memberId = getMemberId(member)
-        val replyResponse = postReplyService.modify(postId, replyId, request, memberId, member.loginId)
+        val replyResponse = postReplyCommandService.modify(postId, replyId, request, memberId, member.loginId)
         return ResponseEntity.ok(replyResponse)
     }
 
@@ -64,7 +66,7 @@ class PostReplyController(
         @PathVariable replyId: Long
     ): ResponseEntity<Void> {
         val memberId = getMemberId(member)
-        postReplyService.remove(postId, replyId, memberId)
+        postReplyCommandService.remove(postId, replyId, memberId)
         return ResponseEntity.noContent().build()
     }
 
@@ -76,7 +78,7 @@ class PostReplyController(
         @PathVariable replyId: Long
     ): ResponseEntity<CountResponse> {
         val memberId = getMemberId(member)
-        val count = postReplyService.increaseCount(postId, replyId, memberId, CountType.LIKE)
+        val count = postReplyCommandService.increaseCount(postId, replyId, memberId, CountType.LIKE)
         return ResponseEntity.ok(CountResponse(count))
     }
 

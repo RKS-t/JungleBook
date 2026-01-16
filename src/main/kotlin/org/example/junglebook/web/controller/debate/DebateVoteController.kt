@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import org.example.junglebook.enums.VoteType
 import org.example.junglebook.model.Member
 import org.example.junglebook.service.MemberService
-import org.example.junglebook.service.debate.DebateVoteService
+import org.example.junglebook.service.debate.DebateVoteCommandService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.validation.annotation.Validated
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/debate/arguments/{argumentId}/votes")
 class DebateVoteController(
-    private val debateVoteService: DebateVoteService,
+    private val debateVoteCommandService: DebateVoteCommandService,
     private val memberService: MemberService
 ) {
 
@@ -28,7 +28,7 @@ class DebateVoteController(
         @RequestParam voteType: VoteType
     ): ResponseEntity<Map<String, Boolean>> {
         val memberId = getMemberId(member)
-        val result = debateVoteService.vote(argumentId, memberId, voteType)
+        val result = debateVoteCommandService.vote(argumentId, memberId, voteType)
         return ResponseEntity.ok(mapOf("success" to result))
     }
 
@@ -40,7 +40,7 @@ class DebateVoteController(
         @RequestParam voteType: VoteType
     ): ResponseEntity<Map<String, Boolean>> {
         val memberId = getMemberId(member)
-        val result = debateVoteService.cancelVote(argumentId, memberId, voteType)
+        val result = debateVoteCommandService.cancelVote(argumentId, memberId, voteType)
         return ResponseEntity.ok(mapOf("success" to result))
     }
 

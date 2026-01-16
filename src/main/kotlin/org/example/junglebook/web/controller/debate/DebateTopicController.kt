@@ -6,7 +6,8 @@ import org.example.junglebook.enums.DebateTopicCategory
 import org.example.junglebook.enums.DebateTopicStatus
 import org.example.junglebook.model.Member
 import org.example.junglebook.service.MemberService
-import org.example.junglebook.service.debate.DebateTopicService
+import org.example.junglebook.service.debate.DebateTopicCommandService
+import org.example.junglebook.service.debate.DebateTopicQueryService
 import org.example.junglebook.web.dto.*
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -19,7 +20,8 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/debate/topics")
 class DebateTopicController(
-    private val debateTopicService: DebateTopicService,
+    private val debateTopicCommandService: DebateTopicCommandService,
+    private val debateTopicQueryService: DebateTopicQueryService,
     private val memberService: MemberService
 ) {
 
@@ -30,7 +32,7 @@ class DebateTopicController(
         @RequestBody request: DebateTopicCreateRequest
     ): ResponseEntity<DebateTopicResponse> {
         val memberId = getMemberId(member)
-        val topicResponse = debateTopicService.createTopic(request, memberId)
+        val topicResponse = debateTopicCommandService.createTopic(request, memberId)
         return ResponseEntity.status(HttpStatus.CREATED).body(topicResponse)
     }
 
@@ -40,8 +42,11 @@ class DebateTopicController(
         @PathVariable topicId: Long,
         @RequestParam(defaultValue = "true") increaseView: Boolean
     ): ResponseEntity<DebateTopicDetailResponse> {
-        val topicDetail = debateTopicService.getTopicDetail(topicId, increaseView)
+        val topicDetail = debateTopicQueryService.getTopicDetail(topicId)
             ?: return ResponseEntity.notFound().build()
+        if (increaseView) {
+            debateTopicCommandService.increaseViewCount(topicId)
+        }
         return ResponseEntity.ok(topicDetail)
     }
 
@@ -52,7 +57,7 @@ class DebateTopicController(
         @RequestParam(defaultValue = "0") pageNo: Int,
         @RequestParam(defaultValue = "20") limit: Int
     ): ResponseEntity<DebateTopicListResponse> {
-        val topicList = debateTopicService.getTopicList(sortType, pageNo, limit)
+        val topicList = debateTopicQueryService.getTopicList(sortType, pageNo, limit)
         return ResponseEntity.ok(topicList)
     }
 
@@ -61,7 +66,7 @@ class DebateTopicController(
     fun getHotTopics(
         @RequestParam(defaultValue = "10") limit: Int
     ): ResponseEntity<List<DebateTopicSimpleResponse>> {
-        val hotTopics = debateTopicService.getHotTopics(limit)
+        val hotTopics = debateTopicQueryService.getHotTopics(limit)
         return ResponseEntity.ok(hotTopics)
     }
 
@@ -72,7 +77,7 @@ class DebateTopicController(
         @RequestParam(defaultValue = "0") pageNo: Int,
         @RequestParam(defaultValue = "20") limit: Int
     ): ResponseEntity<DebateTopicListResponse> {
-        val topicList = debateTopicService.getTopicsByCategory(category, pageNo, limit)
+        val topicList = debateTopicQueryService.getTopicsByCategory(category, pageNo, limit)
         return ResponseEntity.ok(topicList)
     }
 
@@ -81,7 +86,7 @@ class DebateTopicController(
     fun searchTopics(
         @RequestBody request: DebateTopicSearchRequest
     ): ResponseEntity<DebateTopicListResponse> {
-        val topicList = debateTopicService.searchTopics(request)
+        val topicList = debateTopicQueryService.searchTopics(request)
         return ResponseEntity.ok(topicList)
     }
 
@@ -91,7 +96,7 @@ class DebateTopicController(
         @RequestParam(defaultValue = "0") pageNo: Int,
         @RequestParam(defaultValue = "20") limit: Int
     ): ResponseEntity<DebateTopicListResponse> {
-        val topicList = debateTopicService.getOngoingTopics(pageNo, limit)
+        val topicList = debateTopicQueryService.getOngoingTopics(pageNo, limit)
         return ResponseEntity.ok(topicList)
     }
 
@@ -100,7 +105,7 @@ class DebateTopicController(
     fun getEndingSoonTopics(
         @RequestParam(defaultValue = "10") limit: Int
     ): ResponseEntity<List<DebateTopicSimpleResponse>> {
-        val topics = debateTopicService.getEndingSoonTopics(limit)
+        val topics = debateTopicQueryService.getEndingSoonTopics(limit)
         return ResponseEntity.ok(topics)
     }
 
@@ -112,7 +117,7 @@ class DebateTopicController(
         @RequestBody request: DebateTopicUpdateRequest
     ): ResponseEntity<DebateTopicResponse> {
         val memberId = getMemberId(member)
-        val topicResponse = debateTopicService.updateTopic(topicId, request, memberId)
+        val topicResponse = debateTopicCommandService.updateTopic(topicId, request, memberId)
             ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok(topicResponse)
     }
@@ -124,7 +129,7 @@ class DebateTopicController(
         @PathVariable topicId: Long
     ): ResponseEntity<Void> {
         val memberId = getMemberId(member)
-        debateTopicService.deleteTopic(topicId, memberId)
+        debateTopicCommandService.deleteTopic(topicId, memberId)
         return ResponseEntity.noContent().build()
     }
 
@@ -136,7 +141,7 @@ class DebateTopicController(
         @RequestParam status: DebateTopicStatus
     ): ResponseEntity<DebateTopicResponse> {
         val memberId = getMemberId(member)
-        val topicResponse = debateTopicService.changeTopicStatus(topicId, status, memberId)
+        val topicResponse = debateTopicCommandService.changeTopicStatus(topicId, status, memberId)
             ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok(topicResponse)
     }
@@ -146,7 +151,7 @@ class DebateTopicController(
     fun getTopicStatistics(
         @PathVariable topicId: Long
     ): ResponseEntity<TopicStatistics> {
-        val statistics = debateTopicService.getTopicStatistics(topicId)
+        val statistics = debateTopicQueryService.getTopicStatistics(topicId)
             ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok(statistics)
     }
@@ -154,7 +159,7 @@ class DebateTopicController(
     @Operation(summary = "대시보드 데이터 조회")
     @GetMapping("/dashboard")
     fun getDashboard(): ResponseEntity<DebateTopicDashboardResponse> {
-        val dashboard = debateTopicService.getDashboard()
+        val dashboard = debateTopicQueryService.getDashboard()
         return ResponseEntity.ok(dashboard)
     }
 

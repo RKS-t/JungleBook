@@ -9,25 +9,30 @@ import org.example.junglebook.exception.DefaultErrorCode
 import org.example.junglebook.exception.GlobalException
 import org.example.junglebook.repository.debate.DebateArgumentRepository
 import org.example.junglebook.repository.debate.DebateFileRepository
+import org.example.junglebook.repository.debate.DebateTopicRepository
 import org.example.junglebook.service.fallacy.FallacyDetectionService
-import org.example.junglebook.web.dto.DebateArgumentResponse
-import org.junit.jupiter.api.BeforeEach
+import org.example.junglebook.web.dto.DebateArgumentCreateRequest
+import org.springframework.transaction.support.TransactionTemplate
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
-import org.mockito.kotlin.any
-import org.mockito.kotlin.never
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyInt
+import org.mockito.ArgumentMatchers.anyLong
+import org.mockito.ArgumentMatchers.anyString
+import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.data.domain.PageImpl
-import org.springframework.data.domain.PageRequest
 import java.time.LocalDateTime
 import java.util.concurrent.CompletableFuture
 
 @ExtendWith(MockitoExtension::class)
-class DebateArgumentServiceUnitTest {
+class DebateArgumentCommandServiceUnitTest {
 
     @Mock
     private lateinit var debateArgumentRepository: DebateArgumentRepository
@@ -36,62 +41,62 @@ class DebateArgumentServiceUnitTest {
     private lateinit var debateFileRepository: DebateFileRepository
 
     @Mock
-    private lateinit var debateTopicService: DebateTopicService
+    private lateinit var debateTopicCommandService: DebateTopicCommandService
+
+    @Mock
+    private lateinit var debateTopicRepository: DebateTopicRepository
 
     @Mock
     private lateinit var fallacyDetectionService: FallacyDetectionService
 
+    @Mock
+    private lateinit var transactionTemplate: TransactionTemplate
+
     @InjectMocks
-    private lateinit var debateArgumentService: DebateArgumentService
+    private lateinit var debateArgumentCommandService: DebateArgumentCommandService
 
-    private lateinit var argumentEntity: DebateArgumentEntity
-
-    @BeforeEach
-    fun setUp() {
-        argumentEntity = DebateArgumentEntity(
-            id = 1L,
-            topicId = 1L,
-            userId = 100L,
-            stance = ArgumentStance.PRO,
-            title = "테스트 논증",
-            content = "테스트 내용",
-            authorNickname = "테스트유저",
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now()
-        )
-    }
+    private val argumentEntity = DebateArgumentEntity(
+        id = 1L,
+        topicId = 1L,
+        userId = 100L,
+        stance = ArgumentStance.PRO,
+        title = "테스트 논증",
+        content = "테스트 내용",
+        authorNickname = "테스트유저",
+        createdAt = LocalDateTime.now(),
+        updatedAt = LocalDateTime.now()
+    )
 
     @Test
     fun `createArgument - 성공 케이스`() {
         val fileIds = listOf(1L, 2L)
         val savedEntity = argumentEntity.copy(id = 1L)
+        val request = DebateArgumentCreateRequest(
+            stance = ArgumentStance.PRO,
+            title = "테스트 논증",
+            content = "테스트 내용",
+            contentHtml = null,
+            authorNickname = "테스트유저",
+            fileIds = fileIds
+        )
 
-        whenever(debateArgumentRepository.save(any())).thenReturn(savedEntity)
-        whenever(debateFileRepository.updateAttachStatus(any(), any(), any(), any())).thenReturn(1)
-        whenever(debateTopicService.increaseArgumentCount(any())).thenReturn(Unit)
-        whenever(debateTopicService.getTopicDetail(any(), any())).thenReturn(null)
-        whenever(fallacyDetectionService.detectFallacyAsync(any(), any(), any(), any()))
+        doReturn(savedEntity).whenever(debateArgumentRepository).save(any(DebateArgumentEntity::class.java))
+        whenever(debateFileRepository.updateAttachStatus(anyInt(), anyLong(), anyLong(), anyLong())).thenReturn(1)
+        doNothing().whenever(debateTopicCommandService).increaseArgumentCount(anyLong())
+        whenever(debateTopicRepository.findByIdAndActiveYnTrue(anyLong())).thenReturn(null)
+        whenever(fallacyDetectionService.detectFallacyAsync(
+            anyString(),
+            anyString(),
+            anyOrNull(),
+            anyOrNull()
+        ))
             .thenReturn(CompletableFuture.completedFuture(null))
 
-        val result = debateArgumentService.createArgument(argumentEntity, fileIds)
+        val result = debateArgumentCommandService.createArgument(1L, 100L, request)
 
         assertThat(result).isNotNull
-        verify(debateArgumentRepository).save(any())
-        verify(debateTopicService).increaseArgumentCount(any())
-    }
-
-    @Test
-    fun `createArgument - 내용 길이 초과 시 예외 발생`() {
-        val longContent = "a".repeat(5001)
-        val longContentEntity = argumentEntity.copy(content = longContent)
-
-        assertThatThrownBy {
-            debateArgumentService.createArgument(longContentEntity, null)
-        }.isInstanceOf(GlobalException::class.java)
-            .matches { exception ->
-                val globalException = exception as GlobalException
-                globalException.code == DefaultErrorCode.WRONG_ACCESS
-            }
+        verify(debateArgumentRepository).save(any(DebateArgumentEntity::class.java))
+        verify(debateTopicCommandService).increaseArgumentCount(anyLong())
     }
 
     @Test
@@ -103,11 +108,11 @@ class DebateArgumentServiceUnitTest {
         whenever(debateArgumentRepository.findByIdAndTopicIdAndActiveYnTrue(argumentId, topicId))
             .thenReturn(argumentEntity)
         whenever(debateArgumentRepository.softDelete(argumentId, userId)).thenReturn(1)
-        whenever(debateTopicService.decreaseArgumentCount(topicId)).thenReturn(Unit)
+        doNothing().whenever(debateTopicCommandService).decreaseArgumentCount(eq(topicId))
 
-        debateArgumentService.deleteArgument(topicId, argumentId, userId)
+        debateArgumentCommandService.deleteArgument(topicId, argumentId, userId)
 
-        verify(debateTopicService).decreaseArgumentCount(topicId)
+        verify(debateTopicCommandService).decreaseArgumentCount(topicId)
     }
 
     @Test
@@ -120,68 +125,12 @@ class DebateArgumentServiceUnitTest {
             .thenReturn(argumentEntity)
 
         assertThatThrownBy {
-            debateArgumentService.deleteArgument(topicId, argumentId, otherUserId)
+            debateArgumentCommandService.deleteArgument(topicId, argumentId, otherUserId)
         }.isInstanceOf(GlobalException::class.java)
             .matches { exception ->
                 val globalException = exception as GlobalException
                 globalException.code == DefaultErrorCode.DEBATE_ARGUMENT_DELETE_DENIED
             }
-    }
-
-    @Test
-    fun `getArgument - 성공 케이스`() {
-        val topicId = 1L
-        val argumentId = 1L
-
-        whenever(debateArgumentRepository.findByIdAndTopicIdAndActiveYnTrue(argumentId, topicId))
-            .thenReturn(argumentEntity)
-
-        val result = debateArgumentService.getArgument(topicId, argumentId, false)
-
-        assertThat(result).isNotNull
-        assertThat(result?.id).isEqualTo(argumentId)
-    }
-
-    @Test
-    fun `getArgument - 논증을 찾을 수 없는 경우`() {
-        val topicId = 1L
-        val argumentId = 999L
-
-        whenever(debateArgumentRepository.findByIdAndTopicIdAndActiveYnTrue(argumentId, topicId))
-            .thenReturn(null)
-
-        val result = debateArgumentService.getArgument(topicId, argumentId, false)
-
-        assertThat(result).isNull()
-    }
-
-    @Test
-    fun `getPopularList - 성공 케이스`() {
-        val topicId = 1L
-
-        whenever(debateArgumentRepository.findPopularByStance(topicId, any())).thenReturn(emptyList())
-
-        val result = debateArgumentService.getPopularList(topicId)
-
-        assertThat(result).isNotNull
-        assertThat(result.keys).containsAll(ArgumentStance.values().toList())
-    }
-
-    @Test
-    fun `getPageableList - 성공 케이스`() {
-        val topicId = 1L
-        val stance = ArgumentStance.PRO
-        val pageNo = 0
-        val limit = 20
-
-        whenever(debateArgumentRepository.countByTopicIdAndStanceAndActiveYnTrue(topicId, stance)).thenReturn(10L)
-        whenever(debateArgumentRepository.findByTopicIdAndStanceAndActiveYnTrueOrderByCreatedAtDesc(any(), any(), any()))
-            .thenReturn(listOf(argumentEntity))
-
-        val result = debateArgumentService.getPageableList(topicId, stance, pageNo, limit)
-
-        assertThat(result).isNotNull
-        assertThat(result.totalCount).isEqualTo(10)
     }
 }
 

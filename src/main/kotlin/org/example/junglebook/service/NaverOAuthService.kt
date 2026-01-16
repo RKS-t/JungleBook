@@ -72,6 +72,8 @@ class NaverOAuthService(
                 HttpStatus.BAD_REQUEST -> throw GlobalException(DefaultErrorCode.INVALID_SOCIAL_TOKEN)
                 else -> throw GlobalException(DefaultErrorCode.EXTERNAL_API_ERROR)
             }
+        } catch (e: GlobalException) {
+            throw e
         } catch (e: Exception) {
             logger.error(e) { "네이버 사용자 정보 조회 중 예외 발생" }
             throw GlobalException(DefaultErrorCode.EXTERNAL_API_ERROR)
